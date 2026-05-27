@@ -1,0 +1,7 @@
+project_id = "your-gcp-project"
+region     = "us-central1"
+
+# Optional overrides
+# name_prefix     = "asp"
+# db_tier         = "db-custom-2-7680"
+# redis_memory_gb = 1

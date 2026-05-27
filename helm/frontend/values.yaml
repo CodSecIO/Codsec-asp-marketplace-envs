@@ -1,0 +1,33 @@
+replicaCount: 2
+
+image:
+  repository: REPLACE_ME/asp-frontend
+  tag: REPLACE_ME
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+service:
+  port: 80
+  targetPort: 3000
+
+backend:
+  url: https://api.asp.example.com
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+ingress:
+  enabled: true
+  className: gce
+  host: asp.example.com
+  staticIpName: ""
+  managedCertificate: true
+
+probes:
+  path: /

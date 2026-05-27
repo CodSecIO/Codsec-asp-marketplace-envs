@@ -1,0 +1,36 @@
+{{- if .Values.ingress.enabled }}
+{{- if .Values.ingress.managedCertificate }}
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: {{ include "asp-backend.name" . }}-cert
+spec:
+  domains:
+    - {{ .Values.ingress.host }}
+---
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "asp-backend.name" . }}
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.ingress.className | quote }}
+    {{- if .Values.ingress.staticIpName }}
+    kubernetes.io/ingress.global-static-ip-name: {{ .Values.ingress.staticIpName | quote }}
+    {{- end }}
+    {{- if .Values.ingress.managedCertificate }}
+    networking.gke.io/managed-certificates: {{ include "asp-backend.name" . }}-cert
+    {{- end }}
+spec:
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "asp-backend.name" . }}
+                port:
+                  number: {{ .Values.service.port }}
+{{- end }}
