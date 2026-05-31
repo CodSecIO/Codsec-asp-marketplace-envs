@@ -1,0 +1,39 @@
+# Defaults render the chart standalone (helm template). Google Cloud Marketplace
+# overrides the image repo/tag fields and injects name/namespace + the inputs
+# declared in schema.yaml at deploy time.
+
+publishedVersion: "0.10.0"
+
+domain: asp.example.com
+
+frontend:
+  image:
+    repo: us-central1-docker.pkg.dev/mcp-ai-shared/mcp-ai-registry/chat-ui
+    tag: "v0.10"
+  replicas: 2
+
+backend:
+  image:
+    repo: us-central1-docker.pkg.dev/mcp-ai-shared/mcp-ai-registry/secops-agent
+    tag: "v0.10"
+  replicas: 2
+
+secopsMcp:
+  image:
+    repo: us-central1-docker.pkg.dev/mcp-ai-shared/mcp-ai-registry/secops
+    tag: "v0.10"
+  replicas: 1
+
+# Customer-provided managed dependencies (BYO).
+postgres:
+  host: ""
+  port: 5432
+  database: asp
+  user: asp
+  password: ""
+
+redis:
+  host: ""
+  port: 6379
+
+jwtSecret: ""

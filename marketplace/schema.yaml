@@ -1,0 +1,101 @@
+x-google-marketplace:
+  schemaVersion: v2
+  applicationApiVersion: v1beta1
+  # Must match the Application CRD version and the image release track.
+  publishedVersion: "0.10.0"
+  publishedVersionMetadata:
+    releaseNote: >-
+      Initial Marketplace release of CodSec ASP: chat UI, backend API, and the
+      SecOps MCP server. Bring your own PostgreSQL and Redis.
+
+  images:
+    # Main image: backend (secops-agent). Empty key is the primary image.
+    '':
+      properties:
+        backend.image.repo:
+          type: REPO_WITH_REGISTRY
+        backend.image.tag:
+          type: TAG
+    frontend:
+      properties:
+        frontend.image.repo:
+          type: REPO_WITH_REGISTRY
+        frontend.image.tag:
+          type: TAG
+    secops-mcp:
+      properties:
+        secopsMcp.image.repo:
+          type: REPO_WITH_REGISTRY
+        secopsMcp.image.tag:
+          type: TAG
+
+  # TODO: scope this down. The deployer creates Deployments, Services, Secrets,
+  # an Ingress, and the Application CR in the target namespace; a custom Role is
+  # preferred over a broad ClusterRole before submission.
+  deployerServiceAccount:
+    roles:
+      - type: ClusterRole
+        rulesType: PREDEFINED
+        rulesFromRoleName: cluster-admin
+
+properties:
+  name:
+    type: string
+    x-google-marketplace:
+      type: NAME
+  namespace:
+    type: string
+    x-google-marketplace:
+      type: NAMESPACE
+
+  domain:
+    type: string
+    title: Public domain for the chat UI (e.g. asp.example.com)
+
+  postgres.host:
+    type: string
+    title: External PostgreSQL host
+  postgres.port:
+    type: integer
+    title: PostgreSQL port
+    default: 5432
+  postgres.database:
+    type: string
+    title: Database name
+    default: asp
+  postgres.user:
+    type: string
+    title: Database user
+    default: asp
+  postgres.password:
+    type: string
+    title: Database password
+    x-google-marketplace:
+      type: MASKED_FIELD
+
+  redis.host:
+    type: string
+    title: External Redis host
+  redis.port:
+    type: integer
+    title: Redis port
+    default: 6379
+
+  jwtSecret:
+    type: string
+    title: JWT signing secret (generated if left blank)
+    x-google-marketplace:
+      type: GENERATED_PASSWORD
+      generatedPassword:
+        length: 48
+        includeSymbols: false
+        base64: true
+
+required:
+  - name
+  - namespace
+  - domain
+  - postgres.host
+  - postgres.user
+  - postgres.password
+  - redis.host

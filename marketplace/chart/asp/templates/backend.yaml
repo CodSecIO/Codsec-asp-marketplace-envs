@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "backend") | nindent 4 }}
+spec:
+  replicas: {{ .Values.backend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "asp.componentLabels" (dict "Release" .Release "component" "backend") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "asp.componentLabels" (dict "Release" .Release "component" "backend") | nindent 8 }}
+    spec:
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repo }}:{{ .Values.backend.image.tag }}"
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: {{ .Release.Name }}-backend-env
+          env:
+            # TODO: confirm how the backend registers the MCP server. This passes
+            # the in-cluster secops-mcp URL only.
+            - name: SECOPS_MCP_URL
+              value: "http://{{ .Release.Name }}-secops-mcp:8000"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "backend") | nindent 4 }}
+spec:
+  selector:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "backend") | nindent 4 }}
+  ports:
+    - port: 80
+      targetPort: 8000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.labels" . | nindent 4 }}
+spec:
+  ingressClassName: gce
+  rules:
+    - host: {{ include "asp.backendDomain" . }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-backend
+                port:
+                  number: 80

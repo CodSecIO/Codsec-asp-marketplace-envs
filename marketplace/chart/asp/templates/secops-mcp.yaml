@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-secops-mcp
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "secops-mcp") | nindent 4 }}
+spec:
+  replicas: {{ .Values.secopsMcp.replicas }}
+  selector:
+    matchLabels:
+      {{- include "asp.componentLabels" (dict "Release" .Release "component" "secops-mcp") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "asp.componentLabels" (dict "Release" .Release "component" "secops-mcp") | nindent 8 }}
+    spec:
+      containers:
+        - name: secops-mcp
+          image: "{{ .Values.secopsMcp.image.repo }}:{{ .Values.secopsMcp.image.tag }}"
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: MCP_SERVER_PORT
+              value: "8000"
+            - name: MCP_SERVER_HOST
+              value: "0.0.0.0"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-secops-mcp
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "secops-mcp") | nindent 4 }}
+spec:
+  selector:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "secops-mcp") | nindent 4 }}
+  ports:
+    - port: 8000
+      targetPort: 8000
