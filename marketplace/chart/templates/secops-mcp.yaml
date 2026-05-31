@@ -50,5 +50,5 @@ spec:
   selector:
     {{- include "asp.componentLabels" (dict "Release" .Release "component" "secops-mcp") | nindent 4 }}
   ports:
-    - port: 8000
+    - port: 80
       targetPort: 8000

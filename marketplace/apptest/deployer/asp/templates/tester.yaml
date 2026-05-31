@@ -18,10 +18,11 @@ spec:
       args:
         - |
           set -e
+          # secops-mcp is intentionally reachable only from the backend (default-deny
+          # NetworkPolicy), so the tester does not curl it directly - the backend's
+          # own health reflects MCP reachability.
           echo "checking backend /api/health"
           curl -fsS "http://{{ .Release.Name }}-backend/api/health"
-          echo "checking secops-mcp /health"
-          curl -fsS "http://{{ .Release.Name }}-secops-mcp:8000/health"
           echo "checking frontend"
           curl -fsS -o /dev/null "http://{{ .Release.Name }}-frontend/"
           echo "all checks passed"

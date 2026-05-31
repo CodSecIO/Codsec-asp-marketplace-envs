@@ -19,11 +19,12 @@ documentation URL; this `marketplace/` directory is the deployer package.
   | backend (FastAPI) | `secops-agent` | 8000 |
   | secops-mcp | `secops` | 8000 |
 
-- One domain, path-routed: `/api` -> backend, `/` -> frontend. The chat UI calls
-  `${NEXT_PUBLIC_BASE_URL}/api` same-origin, and the backend serves under `/api`
-  (health at `/api/health`).
-- HTTPS only: a GKE ManagedCertificate is created for the domain and HTTP is
-  disabled on the Ingress.
+- One domain, path-routed: `/api` -> backend, `/` -> frontend. The chat UI reads
+  `SERVER_HOST` at runtime and calls `${SERVER_HOST}/api` same-origin; the backend
+  serves under `/api` (health at `/api/health`).
+- HTTPS: a GKE ManagedCertificate is created for the domain, and a FrontendConfig
+  redirects HTTP to HTTPS. HTTP stays enabled because managed-cert provisioning and
+  the redirect both require it (GKE forbids `allow-http:false` with managed certs).
 - secops-mcp is reachable only from the backend (default-deny NetworkPolicy).
 - Deployer ServiceAccount is a namespaced Role scoped to the resources it creates.
 
@@ -32,12 +33,12 @@ documentation URL; this `marketplace/` directory is the deployer package.
 ```
 marketplace/
   schema.yaml                  # Marketplace inputs + image declarations + deployer RBAC
-  deployer/Dockerfile          # FROM gcr.io/cloud-marketplace-tools/k8s/deployer_helm
+  deployer/Dockerfile          # FROM .../deployer_helm/onbuild (packages chart/ + schema.yaml)
   Makefile                     # build deployer, lint, verify
-  chart/asp/templates/
+  chart/templates/
     application.yaml           # Application CRD (required by Marketplace)
     backend.yaml frontend.yaml secops-mcp.yaml secret.yaml
-    ingress.yaml               # ManagedCertificate + single path-routed Ingress
+    ingress.yaml               # ManagedCertificate + FrontendConfig + path-routed Ingress
     networkpolicy.yaml         # default-deny to secops-mcp
   apptest/deployer/asp/        # tester Pod for `mpdev verify`
 ```
@@ -65,7 +66,7 @@ Two product-code items (in `mcp-project` / `chat-ui-mcp-project`, which we own):
   (the default) for a reliable request-time read. One-line fix.
 - **secops-mcp registration.** The backend reads MCP URLs from the `applications`
   DB table per permission set, not from an env var. The in-cluster URL
-  `http://<name>-secops-mcp:8000` must be seeded there; confirm the seed mechanism.
+  `http://<name>-secops-mcp` must be seeded there; confirm the seed mechanism.
 
 Packaging items handled elsewhere:
 

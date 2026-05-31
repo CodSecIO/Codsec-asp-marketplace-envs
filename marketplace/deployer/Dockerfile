@@ -1,10 +1,11 @@
-# Marketplace classic Kubernetes app deployer (Helm based).
-# The marketplace-k8s-app-tools Makefile normally packages the chart into
-# /data/chart/*.tar.gz; for a hand build we copy the chart directory directly.
-FROM gcr.io/cloud-marketplace-tools/k8s/deployer_helm
-
-COPY chart/asp /data/chart/asp
-COPY schema.yaml /data/schema.yaml
-
-# The base image's entrypoint runs the Helm-based install against the target
-# namespace and creates the Application resource.
+# Marketplace classic Kubernetes app deployer (Helm based), onbuild variant.
+#
+# The onbuild base packages the chart from the build context into
+# /data/chart/chart.tar.gz (the layout the deployer runtime actually reads) and
+# runs envsubst on schema.yaml. The chart must live at `chart/` in the build
+# context (Chart.yaml at chart/Chart.yaml) with schema.yaml alongside it - the
+# Makefile builds with the marketplace/ directory as the context.
+#
+# NOTE: the produced image must still pass `mpdev verify` on a test GKE cluster
+# before submission (see README open items).
+FROM gcr.io/cloud-marketplace-tools/k8s/deployer_helm/onbuild
