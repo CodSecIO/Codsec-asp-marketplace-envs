@@ -49,6 +49,8 @@ metadata:
 spec:
   selector:
     {{- include "asp.componentLabels" (dict "Release" .Release "component" "secops-mcp") | nindent 4 }}
+  # Port 8000 (not 80): the backend connects to MCP servers on :8000 by
+  # convention (MCPService.__get_self_hosted_url / the seeded MCP_URL).
   ports:
-    - port: 80
+    - port: 8000
       targetPort: 8000

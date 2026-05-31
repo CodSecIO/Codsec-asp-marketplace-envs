@@ -64,9 +64,15 @@ Two product-code items (in `mcp-project` / `chat-ui-mcp-project`, which we own):
   `export const runtime = 'edge'`, which in self-hosted standalone only reads
   runtime env via an undocumented startup snapshot. Change it to `runtime = 'nodejs'`
   (the default) for a reliable request-time read. One-line fix.
-- **secops-mcp registration.** The backend reads MCP URLs from the `applications`
-  DB table per permission set, not from an env var. The in-cluster URL
-  `http://<name>-secops-mcp` must be seeded there; confirm the seed mechanism.
+- **secops-mcp registration (backend/product decision, not packaging).** The
+  backend resolves a self-hosted MCP's URL by convention as
+  `http://<app>.tools-<permission_set_id>-<ENV>.svc.cluster.local:8000` (per-tenant,
+  provisioned dynamically by the asp-infrastructure-orchestrator). This bundle
+  deploys one static `<name>-secops-mcp:8000` and has no orchestrator, so the
+  backend will not find it at that URL. To wire it up, `secops` must be registered
+  as `remote=true` with `MCP_URL=http://<name>-secops-mcp:8000` (plus MCP_URL
+  validators + AUTH_TYPE) so the backend uses the remote-MCP path - a backend
+  migration/seed change in mcp-project, confirm with the backend owner.
 
 Packaging items handled elsewhere:
 

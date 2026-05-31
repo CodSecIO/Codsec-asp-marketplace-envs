@@ -29,7 +29,7 @@ spec:
               value: "prod"
           # NOTE: the backend discovers MCP servers from the `applications` DB
           # table (per-permission-set URL), not from an env var. Registering
-          # secops-mcp at the in-cluster URL http://{{ .Release.Name }}-secops-mcp
+          # secops-mcp at the in-cluster URL http://{{ .Release.Name }}-secops-mcp:8000
           # is an app-side seed step - confirm the seeding mechanism on a test
           # cluster before submission.
           readinessProbe:
