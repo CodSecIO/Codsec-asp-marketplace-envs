@@ -55,13 +55,14 @@ Install `mpdev` from https://github.com/GoogleCloudPlatform/marketplace-k8s-app-
 
 ## Open items before submission
 
-Two product-code dependencies (in `mcp-project` / `chat-ui-mcp-project`, which we
-own - not blocked on another team):
+Two product-code items (in `mcp-project` / `chat-ui-mcp-project`, which we own):
 
-- **Frontend backend URL is build-time.** `chat-ui` inlines `NEXT_PUBLIC_BASE_URL`
-  at build, so a single Marketplace image cannot adapt to each customer's domain.
-  The image needs to resolve the API base at runtime (e.g. `window.location.origin`
-  or a runtime config endpoint). This is a small `chat-ui` change.
+- **chat-ui app-configs route runtime.** The chat UI already resolves its backend
+  host at runtime from `SERVER_HOST` (via `/runtime/app-configs`), so this chart
+  sets `SERVER_HOST=https://<domain>` and no rebuild is needed. But that route is
+  `export const runtime = 'edge'`, which in self-hosted standalone only reads
+  runtime env via an undocumented startup snapshot. Change it to `runtime = 'nodejs'`
+  (the default) for a reliable request-time read. One-line fix.
 - **secops-mcp registration.** The backend reads MCP URLs from the `applications`
   DB table per permission set, not from an env var. The in-cluster URL
   `http://<name>-secops-mcp:8000` must be seeded there; confirm the seed mechanism.

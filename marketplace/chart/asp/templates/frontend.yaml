@@ -21,13 +21,14 @@ spec:
           ports:
             - name: http
               containerPort: 3000
-          # The chat UI calls ${NEXT_PUBLIC_BASE_URL}/api same-origin. This is a
-          # Next.js build-time public var, so a fixed Marketplace image inlines
-          # whatever it was built with. For varying customer domains the image
-          # must resolve the API base at runtime (frontend change) - see README.
+          # The chat UI reads its backend host at runtime from SERVER_HOST (via
+          # its /runtime/app-configs route), so one prebuilt image works on any
+          # domain. Single-domain deploy: the backend is /api on the same host.
           env:
-            - name: NEXT_PUBLIC_BASE_URL
+            - name: SERVER_HOST
               value: "https://{{ .Values.domain }}"
+            # TODO: the app-configs route also reads APP_NAMES, DEFAULT_APP_NAME,
+            # DEFAULT_AGENT, LOGO_URL, etc. Wire these (schema inputs) before submit.
           readinessProbe:
             httpGet:
               path: /
