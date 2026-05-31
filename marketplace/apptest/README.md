@@ -1,10 +1,14 @@
-# apptest (TODO)
+# apptest
 
-`mpdev verify` requires a tester that runs after install and exits 0 on success.
-The tester is a Pod annotated `marketplace.cloud.google.com/verification: test`,
-typically packaged as a small chart under `apptest/deployer/`.
+Tester for `mpdev verify`. After install, Marketplace runs the Pod in
+`deployer/asp/templates/tester.yaml` (annotated
+`marketplace.cloud.google.com/verification: test`) and reads its exit code.
 
-Planned smoke test: curl the backend `/healthz` and the secops-mcp `/health`
-in-cluster, and confirm the frontend Service responds, then exit 0.
+The tester smoke-checks the deployed services in-cluster:
+- backend `GET /api/health`
+- secops-mcp `GET /health`
+- frontend `GET /`
 
-This is not implemented yet - it is required before submission.
+It exits non-zero on the first failure. Extend it as the app gains real
+readiness signals (for example a backend check that confirms secops-mcp is
+registered and reachable).

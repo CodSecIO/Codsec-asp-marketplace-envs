@@ -11,5 +11,3 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/name: {{ .Release.Name }}
 app.kubernetes.io/component: {{ .component }}
 {{- end -}}
-
-{{- define "asp.backendDomain" -}}api.{{ .Values.domain }}{{- end -}}

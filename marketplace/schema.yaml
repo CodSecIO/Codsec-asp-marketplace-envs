@@ -29,14 +29,27 @@ x-google-marketplace:
         secopsMcp.image.tag:
           type: TAG
 
-  # TODO: scope this down. The deployer creates Deployments, Services, Secrets,
-  # an Ingress, and the Application CR in the target namespace; a custom Role is
-  # preferred over a broad ClusterRole before submission.
+  # Namespaced Role scoped to exactly what the deployer creates.
   deployerServiceAccount:
     roles:
-      - type: ClusterRole
-        rulesType: PREDEFINED
-        rulesFromRoleName: cluster-admin
+      - type: Role
+        rulesType: CUSTOM
+        rules:
+          - apiGroups: ["apps"]
+            resources: ["deployments"]
+            verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+          - apiGroups: [""]
+            resources: ["services", "secrets"]
+            verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+          - apiGroups: ["networking.k8s.io"]
+            resources: ["ingresses", "networkpolicies"]
+            verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+          - apiGroups: ["networking.gke.io"]
+            resources: ["managedcertificates"]
+            verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+          - apiGroups: ["app.k8s.io"]
+            resources: ["applications"]
+            verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
 properties:
   name:
