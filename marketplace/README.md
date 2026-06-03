@@ -40,11 +40,13 @@ marketplace/
   schema.yaml                  # Marketplace inputs + image declarations + deployer RBAC
   deployer/Dockerfile          # FROM .../deployer_helm/onbuild (packages chart/ + schema.yaml)
   Makefile                     # build deployer, lint, verify
-  chart/templates/
-    application.yaml           # Application CRD (required by Marketplace)
-    backend.yaml frontend.yaml secret.yaml
-    ingress.yaml               # ManagedCertificate + FrontendConfig + path-routed Ingress
-    networkpolicy.yaml         # default-deny scaffold (currently inert; see note above)
+  chart/asp/                   # chart nested one level: onbuild needs a single chart dir
+    Chart.yaml values.yaml
+    templates/
+      application.yaml         # Application CRD (required by Marketplace)
+      backend.yaml frontend.yaml secret.yaml
+      ingress.yaml             # ManagedCertificate + FrontendConfig + path-routed Ingress
+      networkpolicy.yaml       # default-deny scaffold (currently inert; see note above)
   apptest/deployer/asp/        # tester Pod for `mpdev verify`
 ```
 

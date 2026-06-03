@@ -12,8 +12,8 @@ DEPLOYER := $(REGISTRY)/$(APP)/deployer
 
 # helm lint + render the chart locally with default values (no Marketplace substitution).
 lint:
-	helm lint chart
-	helm template asp chart >/dev/null && echo "template OK"
+	helm lint chart/asp
+	helm template asp chart/asp >/dev/null && echo "template OK"
 
 # Build and push the deployer image. The onbuild base packages chart/ + schema.yaml;
 # REGISTRY/TAG are passed for the base image's schema envsubst step. Build context
