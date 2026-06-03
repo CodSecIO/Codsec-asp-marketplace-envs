@@ -6,8 +6,9 @@ x-google-marketplace:
   publishedVersion: "1.0.0"
   publishedVersionMetadata:
     releaseNote: >-
-      Initial Marketplace release of CodSec ASP: chat UI and backend API.
-      Bring your own PostgreSQL and Redis.
+      Initial Marketplace release of CodSec ASP: chat UI and backend API, with
+      bundled in-cluster PostgreSQL and Redis (demo-grade; contact CodSec for
+      production-managed data services).
 
   images:
     # Main image: backend (secops-agent). Empty key is the primary image.
@@ -36,7 +37,7 @@ x-google-marketplace:
           # pods + pods/log are required so the deployer SA can apply and watch
           # the apptest tester Pod during `mpdev verify`.
           - apiGroups: [""]
-            resources: ["services", "secrets", "pods"]
+            resources: ["services", "secrets", "pods", "persistentvolumeclaims"]
             verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
           - apiGroups: [""]
             resources: ["pods/log"]
@@ -65,40 +66,17 @@ properties:
     type: string
     title: Public domain for the chat UI (e.g. asp.example.com)
 
-  postgres.host:
+  # Postgres + Redis are bundled in-cluster, so there are no connection inputs.
+  # Only the DB password is generated; everything else has chart defaults.
+  dbPassword:
     type: string
-    title: External PostgreSQL host
-  postgres.port:
-    type: integer
-    title: PostgreSQL port
-    default: 5432
-  postgres.database:
-    type: string
-    title: Database name
-    default: asp
-  postgres.user:
-    type: string
-    title: Database user
-    default: asp
-  postgres.password:
-    type: string
-    title: Database password
+    title: Bundled PostgreSQL password (generated if left blank)
     x-google-marketplace:
-      type: MASKED_FIELD
-
-  redis.host:
-    type: string
-    title: External Redis host
-  redis.port:
-    type: integer
-    title: Redis port
-    default: 6379
-  redis.password:
-    type: string
-    title: Redis password (leave blank if AUTH is disabled)
-    default: ""
-    x-google-marketplace:
-      type: MASKED_FIELD
+      type: GENERATED_PASSWORD
+      generatedPassword:
+        length: 32
+        includeSymbols: false
+        base64: false
 
   jwtSecret:
     type: string
@@ -116,7 +94,3 @@ required:
   - name
   - namespace
   - domain
-  - postgres.host
-  - postgres.user
-  - postgres.password
-  - redis.host

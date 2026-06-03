@@ -9,14 +9,19 @@ documentation URL; this `marketplace/` directory is the deployer package.
 ## Model
 
 - Classic Kubernetes app: the deployer installs in-cluster resources only.
-- The customer brings their own PostgreSQL and Redis and supplies connection
-  details at deploy time. The deployer does not provision managed services.
-- Two services, each its own image:
+- PostgreSQL and Redis are **bundled in-cluster** (demo-grade: single replica,
+  one PVC for Postgres, no HA or managed backups). This keeps the package
+  self-contained so it installs with no external prerequisites. Production
+  deployments should point at managed data services - contact CodSec. The only
+  deploy-time inputs are `domain` (+ auto-generated `dbPassword` / `jwtSecret`).
+- Two app images + bundled data services:
 
-  | Service | Image (`mcp-ai-shared/mcp-ai-registry/...`) | Port |
-  |---------|----------------------------------------------|------|
+  | Service | Image | Port |
+  |---------|-------|------|
   | frontend (Next.js chat UI) | `chat-ui` | 3000 |
   | backend (FastAPI) | `secops-agent` | 8000 |
+  | postgres (bundled) | `postgres:16-alpine` | 5432 |
+  | redis (bundled) | `redis:7-alpine` | 6379 |
 
   > **secops-mcp is deprecated in this package for now.** The backend discovers
   > MCP servers from a DB `applications` table by per-tenant convention, and this
@@ -45,6 +50,7 @@ marketplace/
     templates/
       application.yaml         # Application CRD (required by Marketplace)
       backend.yaml frontend.yaml secret.yaml
+      postgres.yaml redis.yaml # bundled in-cluster data services
       ingress.yaml             # ManagedCertificate + FrontendConfig + path-routed Ingress
       networkpolicy.yaml       # default-deny scaffold (currently inert; see note above)
   apptest/deployer/asp/        # tester Pod for `mpdev verify`

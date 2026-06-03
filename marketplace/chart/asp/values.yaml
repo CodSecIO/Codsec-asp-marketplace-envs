@@ -23,17 +23,17 @@ backend:
     tag: "1.0.0"
   replicas: 2
 
-# Customer-provided managed dependencies (BYO).
+# Bundled in-cluster dependencies (demo-grade: single replica, no HA/backups).
+# Production deployments should use managed Postgres/Redis - contact CodSec.
 postgres:
-  host: ""
-  port: 5432
+  image: postgres:16-alpine
   database: asp
   user: asp
-  password: ""
+  storage: 8Gi
 
 redis:
-  host: ""
-  port: 6379
-  password: ""
+  image: redis:7-alpine
 
+# Generated at deploy time by Marketplace (schema GENERATED_PASSWORD).
+dbPassword: ""
 jwtSecret: ""
