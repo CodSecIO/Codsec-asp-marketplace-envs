@@ -1,22 +1,26 @@
 # Defaults render the chart standalone (helm template). Google Cloud Marketplace
 # overrides the image repo/tag fields and injects name/namespace + the inputs
 # declared in schema.yaml at deploy time. The image tags below are placeholders
-# for local render only; real published tags differ (e.g. v0.10-pr...).
+# for local render only; Marketplace substitutes the real published repo/tag
+# (track 1.0 / version 1.0.0) at deploy time.
 
-publishedVersion: "0.10.0"
+publishedVersion: "1.0.0"
 
 domain: asp.example.com
 
 frontend:
   image:
-    repo: us-central1-docker.pkg.dev/mcp-ai-shared/mcp-ai-registry/chat-ui
-    tag: "v0.10"
+    # Additional image: lives under the primary image's app root.
+    repo: us-docker.pkg.dev/codsec-public/asp-deployer/asp/frontend
+    tag: "1.0.0"
   replicas: 2
 
 backend:
   image:
-    repo: us-central1-docker.pkg.dev/mcp-ai-shared/mcp-ai-registry/secops-agent
-    tag: "v0.10"
+    # Primary image (schema empty key ""): sits AT the app root; the deployer
+    # lives at <root>/deployer and additional images at <root>/<name>.
+    repo: us-docker.pkg.dev/codsec-public/asp-deployer/asp
+    tag: "1.0.0"
   replicas: 2
 
 # Customer-provided managed dependencies (BYO).

@@ -3,8 +3,8 @@
 
 REGISTRY ?= us-docker.pkg.dev/codsec-public/asp-deployer
 APP      ?= asp
-TRACK    ?= 0.10
-VERSION  ?= 0.10.0
+TRACK    ?= 1.0
+VERSION  ?= 1.0.0
 
 DEPLOYER := $(REGISTRY)/$(APP)/deployer
 

@@ -2,8 +2,8 @@ x-google-marketplace:
   schemaVersion: v2
   applicationApiVersion: v1beta1
   # Full semver of this release; rendered into the Application CRD version.
-  # Distinct from the rolling image track tag (e.g. v0.10).
-  publishedVersion: "0.10.0"
+  # Distinct from the rolling image track tag (e.g. 1.0).
+  publishedVersion: "1.0.0"
   publishedVersionMetadata:
     releaseNote: >-
       Initial Marketplace release of CodSec ASP: chat UI and backend API.
