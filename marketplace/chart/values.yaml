@@ -19,12 +19,6 @@ backend:
     tag: "v0.10"
   replicas: 2
 
-secopsMcp:
-  image:
-    repo: us-central1-docker.pkg.dev/mcp-ai-shared/mcp-ai-registry/secops
-    tag: "v0.10"
-  replicas: 1
-
 # Customer-provided managed dependencies (BYO).
 postgres:
   host: ""

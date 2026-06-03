@@ -18,7 +18,7 @@ lint:
 # Build and push the deployer image. The onbuild base packages chart/ + schema.yaml;
 # REGISTRY/TAG are passed for the base image's schema envsubst step. Build context
 # is this directory (it holds chart/ and schema.yaml).
-# NOTE: each service image (chat-ui, secops-agent, secops) must also carry the
+# NOTE: each service image (chat-ui, secops-agent) must also carry the
 # annotation com.googleapis.cloudmarketplace.product.service.name=services/<name>
 # before submission; that is done where those images are built, not here.
 deployer:

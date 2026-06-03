@@ -6,9 +6,7 @@ Tester for `mpdev verify`. After install, Marketplace runs the Pod in
 
 The tester smoke-checks the deployed services in-cluster:
 - backend `GET /api/health`
-- secops-mcp `GET /health`
 - frontend `GET /`
 
 It exits non-zero on the first failure. Extend it as the app gains real
-readiness signals (for example a backend check that confirms secops-mcp is
-registered and reachable).
+readiness signals.

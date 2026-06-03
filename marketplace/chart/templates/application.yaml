@@ -11,7 +11,7 @@ spec:
   descriptor:
     type: ASP
     version: "{{ .Values.publishedVersion }}"
-    description: "CodSec ASP - chat UI, backend API, and the SecOps MCP server."
+    description: "CodSec ASP - chat UI and backend API."
     maintainers:
       - name: CodSec
         url: https://codsec.io

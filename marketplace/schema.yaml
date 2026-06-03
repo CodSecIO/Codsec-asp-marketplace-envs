@@ -6,8 +6,8 @@ x-google-marketplace:
   publishedVersion: "0.10.0"
   publishedVersionMetadata:
     releaseNote: >-
-      Initial Marketplace release of CodSec ASP: chat UI, backend API, and the
-      SecOps MCP server. Bring your own PostgreSQL and Redis.
+      Initial Marketplace release of CodSec ASP: chat UI and backend API.
+      Bring your own PostgreSQL and Redis.
 
   images:
     # Main image: backend (secops-agent). Empty key is the primary image.
@@ -22,12 +22,6 @@ x-google-marketplace:
         frontend.image.repo:
           type: REPO_WITH_REGISTRY
         frontend.image.tag:
-          type: TAG
-    secops-mcp:
-      properties:
-        secopsMcp.image.repo:
-          type: REPO_WITH_REGISTRY
-        secopsMcp.image.tag:
           type: TAG
 
   # Namespaced Role scoped to exactly what the deployer creates.
