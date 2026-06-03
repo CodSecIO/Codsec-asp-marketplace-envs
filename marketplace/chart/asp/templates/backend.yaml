@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "backend") | nindent 4 }}
+spec:
+  replicas: {{ .Values.backend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "asp.componentLabels" (dict "Release" .Release "component" "backend") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "asp.componentLabels" (dict "Release" .Release "component" "backend") | nindent 8 }}
+    spec:
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repo }}:{{ .Values.backend.image.tag }}"
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: {{ .Release.Name }}-backend-env
+          env:
+            - name: MCP_ENVIRONMENT_TYPE
+              value: "prod"
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "backend") | nindent 4 }}
+spec:
+  selector:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "backend") | nindent 4 }}
+  ports:
+    - port: 80
+      targetPort: 8000

@@ -1,0 +1,56 @@
+# Single domain, path-routed: /api -> backend, / -> frontend. HTTPS via a GKE
+# managed certificate; HTTP stays enabled and is redirected to HTTPS by the
+# FrontendConfig. GKE forbids allow-http:false together with managed-certificates,
+# and the HTTPS redirect itself requires HTTP to remain enabled.
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: {{ .Release.Name }}-cert
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.labels" . | nindent 4 }}
+spec:
+  domains:
+    - {{ .Values.domain }}
+---
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.labels" . | nindent 4 }}
+spec:
+  redirectToHttps:
+    enabled: true
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    networking.gke.io/managed-certificates: {{ .Release.Name }}-cert
+    networking.gke.io/v1beta1.FrontendConfig: {{ .Release.Name | quote }}
+  labels:
+    {{- include "asp.labels" . | nindent 4 }}
+spec:
+  ingressClassName: gce
+  rules:
+    - host: {{ .Values.domain }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-backend
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-frontend
+                port:
+                  number: 80

@@ -1,0 +1,38 @@
+apiVersion: app.k8s.io/v1beta1
+kind: Application
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    marketplace.cloud.google.com/deploy-info: '{"partner_id": "codsec", "product_id": "asp", "partner_name": "CodSec"}'
+  labels:
+    {{- include "asp.labels" . | nindent 4 }}
+spec:
+  descriptor:
+    type: ASP
+    version: "{{ .Values.publishedVersion }}"
+    description: "CodSec ASP - chat UI and backend API."
+    maintainers:
+      - name: CodSec
+        url: https://codsec.io
+    links:
+      - description: Documentation
+        url: https://github.com/CodSecIO/Codsec-asp-marketplace-envs
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Release.Name }}
+  componentKinds:
+    - group: apps/v1
+      kind: Deployment
+    - group: v1
+      kind: Service
+    - group: v1
+      kind: Secret
+    - group: networking.k8s.io/v1
+      kind: Ingress
+    - group: networking.k8s.io/v1
+      kind: NetworkPolicy
+    - group: networking.gke.io/v1
+      kind: ManagedCertificate
+    - group: networking.gke.io/v1beta1
+      kind: FrontendConfig

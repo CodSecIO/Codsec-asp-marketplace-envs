@@ -1,0 +1,25 @@
+# Verification tester: must exit 0 for `mpdev verify` to pass. Marketplace runs
+# it after install and reads the exit code.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Release.Name }}-tester
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    marketplace.cloud.google.com/verification: test
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}
+spec:
+  restartPolicy: Never
+  containers:
+    - name: tester
+      image: curlimages/curl:8.10.1
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          set -e
+          echo "checking backend /api/health"
+          curl -fsS "http://{{ .Release.Name }}-backend/api/health"
+          echo "checking frontend"
+          curl -fsS -o /dev/null "http://{{ .Release.Name }}-frontend/"
+          echo "all checks passed"
