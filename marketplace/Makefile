@@ -22,7 +22,11 @@ lint:
 # annotation com.googleapis.cloudmarketplace.product.service.name=services/<name>
 # before submission; that is done where those images are built, not here.
 deployer:
+	# --platform=linux/amd64: Marketplace runs images on x86 nodes; a Mac (arm64)
+	# build is rejected. --provenance=false: emit a plain single-arch image, not
+	# an OCI index with an attestation manifest (which breaks schema extraction).
 	docker build \
+	  --platform=linux/amd64 --provenance=false \
 	  --build-arg REGISTRY=$(REGISTRY) --build-arg TAG=$(VERSION) \
 	  -t $(DEPLOYER):$(TRACK) -t $(DEPLOYER):$(VERSION) \
 	  -f deployer/Dockerfile .
