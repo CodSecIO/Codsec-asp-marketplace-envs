@@ -1,81 +1,89 @@
 # ASP - Google Cloud Marketplace Terraform Kubernetes app
 
-Terraform module for the Marketplace **Terraform Kubernetes app** product:
-customers deploy ASP through Infrastructure Manager. This is a **separate
-Marketplace product** from the classic deployer package in `marketplace/`
-(product type is fixed at creation; one listing cannot offer both deployment
-methods). Both products share the same chart - this module renders it with
-`postgres.bundled=false`.
+Marketplace product where customers deploy ASP through Infrastructure Manager.
+This is a **separate product** from the classic deployer in `marketplace/`
+(one listing cannot offer both deployment methods); both share the chart at
+`marketplace/chart/asp` - this module renders it with `postgres.bundled=false`.
 
-## What it deploys
+**What the module deploys:** managed Cloud SQL PostgreSQL 16 (private IP,
+`deletion_protection` on) + the ASP chart (frontend, backend, in-cluster
+Redis). By default onto the customer's **existing** cluster and network
+(which must already have Private Services Access); `create_cluster` /
+`create_network` are opt-in for greenfield. `modules/` holds vendored copies
+of our production modules from `CodSecIO/terraform-modules` (private repo, so
+the code ships in the package) - every adjustment is commented in place.
 
-- **Always:** managed Cloud SQL PostgreSQL 16 (private IP, backups + PITR,
-  `deletion_protection` on by default) and the ASP chart (frontend + backend +
-  in-cluster Redis) via `helm_release`.
-- **By default it deploys onto EXISTING infrastructure** - the customer's
-  cluster (`cluster_name`) and network (`network_name`/`subnetwork_name`),
-  matching Google's starter-module pattern. The existing network **must
-  already have a Private Services Access connection** (Cloud SQL private IP
-  requires it; this module deliberately never creates PSA on an existing
-  network, because that peering is shared with other services).
-- **Opt-in greenfield:** `create_cluster = true` creates a GKE cluster via the
-  vendored gke module; `create_network = true` creates a dedicated VPC with
-  GKE secondary ranges and PSA via the vendored vpc module.
+## Releasing a new version (example: 1.2)
 
-## Vendored modules
+One-time tools: `gcloud` (CLI **and** `gcloud auth application-default login`
+- the Terraform provider uses ADC), `helm`, the `cft` CLI, and a **Terraform
+1.5.7 binary** - that exact version is what Marketplace validation and
+customer deploys run.
 
-`modules/` contains copies of our production modules from
-`CodSecIO/terraform-modules` (private repo - Infrastructure Manager cannot
-fetch it, so the code ships inside this package). Adjustments made to the
-copies are commented in place:
+1. **Change and verify the module** (hard rules: `required_version` must
+   allow 1.5.7; no cross-variable `validation` blocks (1.9+ feature); no
+   complex variable types - the Deploy Config UI rejects `map(any)` etc.;
+   every Marketplace-injected variable keeps a default so a bare plan works;
+   `goog_cm_deployment_name` must exist and prefix all resource names):
 
-- exact google provider pins relaxed (one version must satisfy all modules;
-  the root pins `~> 7.12`),
-- gke: in-module kubernetes/helm provider configs and cluster-convention
-  resources (storage classes, compute classes) removed,
-- vpc/cloudsql: upstream registry module versions bumped past their
-  `google < 7` cap (network 12.0.0, cloud-router 8.3.0, sql-db 27.2.0);
-  the cloudsql auth-proxy VM submodule removed.
-
-## Local checks
-
-```bash
-terraform fmt -recursive
-terraform init -backend=false
-terraform validate
-```
-
-Marketplace release validation runs `terraform plan --var-file
-marketplace_test.tfvars` only - a clean plan does not prove a working deploy.
-Run a real `terraform apply` + `helm test`-level smoke check on a throwaway
-project before submission.
-
-## Publish
-
-1. Push the chart as an OCI artifact (registry MUST be `us-docker.pkg.dev`):
    ```bash
-   helm package ../marketplace/chart/asp        # asp-<version>.tgz
-   helm push asp-<version>.tgz oci://us-docker.pkg.dev/codsec-public/asp-charts
+   cd terraform-marketplace
+   cft blueprint metadata -p . -q -d --nested=false   # regen after ANY variable change
+   terraform-1.5.7 init -backend=false && terraform-1.5.7 validate
+   terraform-1.5.7 plan -var-file=marketplace_test.tfvars -var project_id=<test-project>
+   terraform-1.5.7 plan -var project_id=<test-project>   # bare plan must also pass
    ```
-2. Generate UI metadata with the CFT CLI (writes `metadata.yaml` +
-   `metadata.display.yaml` into this directory):
+
+2. **Tag the artifacts with the new Display Tag.** Chart and images must
+   carry the same MAJOR.MINOR tag, and images live as **siblings of the
+   chart, named by the `schema.yaml` keys** (`backend`, `frontend`):
+
    ```bash
-   cft blueprint metadata -p . -q -d --nested=false
-   cft blueprint metadata -p . -v
+   for a in asp backend frontend; do
+     gcloud artifacts docker tags add \
+       us-docker.pkg.dev/codsec-public/asp-charts/$a:1.1 \
+       us-docker.pkg.dev/codsec-public/asp-charts/$a:1.2
+   done
    ```
-3. ZIP this directory (exclude `.terraform*` - the validator rejects ANY
-   `.terraform*` entry, including `.terraform.lock.hcl` - and `*.tfstate*`)
-   and upload to a **versioned** GCS bucket in `codsec-public`.
-   **Package revision rules (learned from validation rounds):** Marketplace
-   snapshots the package per release **version identity** (Display Tag +
-   Version title) and the snapshot is immutable - re-selecting the same GCS
-   path, re-uploading, or deleting and recreating the release does NOT
-   refresh it. For every package revision: upload under a **new object name**
-   (`asp-tf-module-X.Y.Z-N.zip`) AND give the release a **new Version title**.
-   Validation runs Terraform **1.5.7** (`terraform plan --var-file
-   marketplace_test.tfvars`); reproduce failures locally with that exact
-   binary - generic plan errors are debuggable only that way.
-4. Producer Portal: product type **Terraform Kubernetes app**; Helm chart URL
-   format `us-docker.pkg.dev/PROJECT/PRODUCT/CHART_NAME`; attach the module
-   ZIP URI; map the image variables from `schema.yaml` so the entitlement
-   binds to the backend (primary) image.
+
+   If the chart or images actually changed: `helm package` + `helm push`
+   (chart), and rebuild images with `--platform=linux/amd64
+   --provenance=false`, then add the **manifest annotation** (a Dockerfile
+   LABEL is not enough):
+
+   ```bash
+   crane mutate --annotation \
+     "com.googleapis.cloudmarketplace.product.service.name=services/asp-cloud-codsec.endpoints.codsec-public.cloud.goog" \
+     us-docker.pkg.dev/codsec-public/asp-charts/<image>:1.2
+   ```
+
+3. **Package the module.** The ZIP must contain `README.md`,
+   `metadata.yaml`, `metadata.display.yaml`, `schema.yaml`, and
+   `marketplace_test.tfvars`, and must contain **no `.terraform*` entry**
+   (the lock file included). Use a **new object name for every revision**:
+
+   ```bash
+   zip -r asp-tf-module-1.2.0.zip . -x '.terraform*' '*.tfstate*'
+   gcloud storage cp asp-tf-module-1.2.0.zip gs://codsec-asp-tf-module/
+   ```
+
+4. **Producer Portal** -> product -> Deployment configuration -> New
+   Release: Display Tag `1.2`, Version title `1.2.0`, module = the new ZIP
+   (Browse), required roles (Service Usage Admin, Kubernetes Engine Admin,
+   Cloud SQL Admin, Compute Network Admin, Service Networking Admin, Secret
+   Manager Admin, Service Account Admin, Service Account User, Cloud
+   Infrastructure Manager Admin), **Done** -> set Default -> **Save and
+   validate**.
+
+5. **Iterating on validation failures.** Marketplace snapshots the package
+   per version identity and the snapshot is immutable: every revision needs
+   a **new ZIP object name AND a new Version title** (`1.2.1`, `1.2.2`...).
+   If the error turns generic/masked ("Terraform plan command failed...
+   contact support"), stale failed versions are poisoning the report -
+   delete them; if it persists, mint a **fresh Display Tag** (step 2) and
+   rebuild the release there. Reproduce plan failures locally with the
+   1.5.7 binary, never a newer one.
+
+Validation only runs `terraform plan`. Before publishing a release to
+customers, run a real `terraform apply` (both existing-cluster and
+greenfield modes) on a throwaway project.
