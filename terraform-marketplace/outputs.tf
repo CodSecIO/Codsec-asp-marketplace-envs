@@ -30,7 +30,7 @@ output "domain" {
 
 output "namespace" {
   description = "Kubernetes namespace ASP is installed in"
-  value       = var.namespace
+  value       = local.namespace
 }
 
 output "project_id" {

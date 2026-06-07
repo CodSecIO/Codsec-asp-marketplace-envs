@@ -53,9 +53,12 @@ variable "domain" {
   description = "Public domain for the chat UI (e.g. asp.example.com). Point its DNS at the ingress IP after deploy."
 }
 
-variable "name_prefix" {
+# Required by Marketplace UI deployments: injected with the deployment name
+# the customer chooses, and used as the prefix for every created resource so
+# multiple deployments in one project cannot collide.
+variable "goog_cm_deployment_name" {
   type        = string
-  description = "Prefix applied to created resource names"
+  description = "Deployment name; prefix applied to created resource names"
   default     = "asp"
 }
 
@@ -67,8 +70,8 @@ variable "environment" {
 
 variable "namespace" {
   type        = string
-  description = "Kubernetes namespace for the app"
-  default     = "asp"
+  description = "Kubernetes namespace for the app (defaults to the deployment name)"
+  default     = ""
 }
 
 variable "helm_release_name" {
@@ -95,7 +98,7 @@ variable "create_cluster" {
 
 variable "cluster_name" {
   type        = string
-  description = "Existing cluster name (required when create_cluster = false). When create_cluster = true and this is empty, the name is derived as <name_prefix>-<environment>-gke."
+  description = "Existing cluster name (required when create_cluster = false). When create_cluster = true and this is empty, the name is derived as <deployment-name>-<environment>-gke."
   default     = ""
 }
 

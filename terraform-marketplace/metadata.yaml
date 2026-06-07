@@ -61,8 +61,8 @@ spec:
         description: Public domain for the chat UI (e.g. asp.example.com). Point its DNS at the ingress IP after deploy.
         varType: string
         required: true
-      - name: name_prefix
-        description: Prefix applied to created resource names
+      - name: goog_cm_deployment_name
+        description: Deployment name; prefix applied to created resource names
         varType: string
         defaultValue: asp
       - name: environment
@@ -70,9 +70,9 @@ spec:
         varType: string
         defaultValue: prod
       - name: namespace
-        description: Kubernetes namespace for the app
+        description: Kubernetes namespace for the app (defaults to the deployment name)
         varType: string
-        defaultValue: asp
+        defaultValue: ""
       - name: helm_release_name
         description: Helm release name (defaults to asp)
         varType: string
@@ -86,7 +86,7 @@ spec:
         varType: bool
         defaultValue: false
       - name: cluster_name
-        description: Existing cluster name (required when create_cluster = false). When create_cluster = true and this is empty, the name is derived as <name_prefix>-<environment>-gke.
+        description: Existing cluster name (required when create_cluster = false). When create_cluster = true and this is empty, the name is derived as <deployment-name>-<environment>-gke.
         varType: string
         defaultValue: ""
       - name: cluster_location

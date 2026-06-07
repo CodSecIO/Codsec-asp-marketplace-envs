@@ -20,12 +20,13 @@ provider "kubernetes" {
 }
 
 locals {
-  helm_release_name = var.helm_release_name != "" ? var.helm_release_name : "asp"
+  helm_release_name = var.helm_release_name != "" ? var.helm_release_name : var.goog_cm_deployment_name
+  namespace         = var.namespace != "" ? var.namespace : var.goog_cm_deployment_name
 }
 
 resource "helm_release" "asp" {
   name             = local.helm_release_name
-  namespace        = var.namespace
+  namespace        = local.namespace
   create_namespace = true
 
   repository = var.helm_chart_repo
