@@ -101,19 +101,22 @@ spec:
         description: Create a regional (true) or zonal (false) cluster
         varType: bool
         defaultValue: false
-      - name: zones
-        description: Zones for a zonal created cluster. Empty picks the first available zone in the region.
-        varType: list(string)
-        defaultValue: []
-      - name: node_pools
-        description: Node pools for a created cluster
-        varType: map(any)
-        defaultValue:
-          asp-pool:
-            autoscaling: true
-            machine_type: e2-standard-4
-            total_max_count: 5
-            total_min_count: 1
+      - name: zone
+        description: Zone for a zonal created cluster (e.g. us-central1-a). Empty picks the first available zone in the region.
+        varType: string
+        defaultValue: ""
+      - name: node_machine_type
+        description: Machine type for the created cluster's node pool
+        varType: string
+        defaultValue: e2-standard-4
+      - name: node_min_count
+        description: Node pool autoscaling minimum
+        varType: number
+        defaultValue: 1
+      - name: node_max_count
+        description: Node pool autoscaling maximum
+        varType: number
+        defaultValue: 5
       - name: create_network
         description: Create a dedicated VPC (with subnet, GKE secondary ranges, and Private Services Access). When false (default), the existing network below is used and it MUST already have a Private Services Access connection for Cloud SQL private IP.
         varType: bool

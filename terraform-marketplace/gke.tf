@@ -2,6 +2,19 @@
 # ASP runs), opt-in creation of a dedicated cluster via our vendored gke
 # module (wraps terraform-google-modules/kubernetes-engine//modules/private-cluster).
 
+locals {
+  # Built from primitive variables - the Deploy Config UI cannot render
+  # complex types, so the pool map is not a customer-facing input.
+  node_pools = {
+    "asp-pool" = {
+      machine_type    = var.node_machine_type
+      total_min_count = var.node_min_count
+      total_max_count = var.node_max_count
+      autoscaling     = true
+    }
+  }
+}
+
 module "gke" {
   count  = var.create_cluster ? 1 : 0
   source = "./modules/gke"
@@ -14,7 +27,7 @@ module "gke" {
   cluster_name       = var.cluster_name != "" ? var.cluster_name : null
   kubernetes_version = var.kubernetes_version
   regional           = var.regional
-  zones              = var.zones
+  zones              = var.zone != "" ? [var.zone] : []
 
   networking_config = {
     network           = local.network_name
@@ -23,7 +36,7 @@ module "gke" {
     ip_range_services = local.ip_range_services
   }
 
-  node_pools = var.node_pools
+  node_pools = local.node_pools
 
   enable_private_nodes    = true
   enable_private_endpoint = false

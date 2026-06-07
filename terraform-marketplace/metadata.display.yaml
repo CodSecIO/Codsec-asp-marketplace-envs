@@ -95,6 +95,15 @@ spec:
         network_name:
           name: network_name
           title: Network Name
+        node_machine_type:
+          name: node_machine_type
+          title: Node Machine Type
+        node_max_count:
+          name: node_max_count
+          title: Node Max Count
+        node_min_count:
+          name: node_min_count
+          title: Node Min Count
         node_pools:
           name: node_pools
           title: Node Pools
@@ -110,6 +119,9 @@ spec:
         subnetwork_name:
           name: subnetwork_name
           title: Subnetwork Name
+        zone:
+          name: zone
+          title: Zone
         zones:
           name: zones
           title: Zones

@@ -9,7 +9,7 @@ create_cluster = true
 create_network = true
 
 domain = "asp.example.com"
-zones  = ["us-central1-a"]
+zone   = "us-central1-a"
 
 # The validation project is throwaway - do not block its teardown.
 db_deletion_protection = false

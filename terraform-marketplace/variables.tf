@@ -117,23 +117,32 @@ variable "regional" {
   default     = false
 }
 
-variable "zones" {
-  type        = list(string)
-  description = "Zones for a zonal created cluster. Empty picks the first available zone in the region."
-  default     = []
+variable "zone" {
+  type        = string
+  description = "Zone for a zonal created cluster (e.g. us-central1-a). Empty picks the first available zone in the region."
+  default     = ""
 }
 
-variable "node_pools" {
-  type        = map(any)
-  description = "Node pools for a created cluster"
-  default = {
-    "asp-pool" = {
-      machine_type    = "e2-standard-4"
-      total_min_count = 1
-      total_max_count = 5
-      autoscaling     = true
-    }
-  }
+# Simple primitives instead of a node-pool map: the Marketplace Deploy Config
+# UI does not support complex variable types (rejects map(any)). The pool map
+# the vendored gke module expects is built in gke.tf from these.
+
+variable "node_machine_type" {
+  type        = string
+  description = "Machine type for the created cluster's node pool"
+  default     = "e2-standard-4"
+}
+
+variable "node_min_count" {
+  type        = number
+  description = "Node pool autoscaling minimum"
+  default     = 1
+}
+
+variable "node_max_count" {
+  type        = number
+  description = "Node pool autoscaling maximum"
+  default     = 5
 }
 
 # --------------------------------------------------------------------------
