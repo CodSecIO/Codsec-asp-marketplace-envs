@@ -62,6 +62,9 @@ spec:
         frontend_image_tag:
           name: frontend_image_tag
           title: Frontend Image Tag
+        goog_cm_deployment_name:
+          name: goog_cm_deployment_name
+          title: Goog Cm Deployment Name
         helm_chart_name:
           name: helm_chart_name
           title: Helm Chart Name

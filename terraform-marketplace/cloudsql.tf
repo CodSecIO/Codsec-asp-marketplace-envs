@@ -8,7 +8,7 @@ module "cloudsql" {
   source = "./modules/cloudsql-postgres"
 
   project_id  = var.project_id
-  project     = var.name_prefix
+  project     = var.goog_cm_deployment_name
   environment = var.environment
   region      = var.region
 
