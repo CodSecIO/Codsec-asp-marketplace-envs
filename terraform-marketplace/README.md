@@ -63,8 +63,12 @@ project before submission.
    cft blueprint metadata -p . -q -d --nested=false
    cft blueprint metadata -p . -v
    ```
-3. ZIP this directory (exclude `.terraform/`, `*.tfstate*`) and upload to a
-   **versioned** GCS bucket in `codsec-public`.
+3. ZIP this directory (exclude `.terraform*` - the validator rejects ANY
+   `.terraform*` entry, including `.terraform.lock.hcl` - and `*.tfstate*`)
+   and upload to a **versioned** GCS bucket in `codsec-public`. The release
+   pins the GCS object **generation**: after re-uploading, re-select the
+   object via Browse in the release, or validation keeps reading the old
+   generation.
 4. Producer Portal: product type **Terraform Kubernetes app**; Helm chart URL
    format `us-docker.pkg.dev/PROJECT/PRODUCT/CHART_NAME`; attach the module
    ZIP URI; map the image variables from `schema.yaml` so the entitlement
