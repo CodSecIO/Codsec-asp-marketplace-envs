@@ -11,6 +11,11 @@ locals {
       total_min_count = var.node_min_count
       total_max_count = var.node_max_count
       autoscaling     = true
+      # Surge-upgrade settings are coalesced against global_node_pools_config,
+      # whose defaults are null - both sides null is a plan-time error, so set
+      # them here (standard GKE defaults).
+      max_surge       = 1
+      max_unavailable = 0
     }
   }
 }
