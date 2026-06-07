@@ -13,7 +13,7 @@ spec:
       dir: /terraform-marketplace
     actuationTool:
       flavor: Terraform
-      version: ">= 1.9.5"
+      version: ">= 1.5.7"
     description: {}
   content:
     subBlueprints:
@@ -32,31 +32,31 @@ spec:
       - name: helm_chart_repo
         description: Helm chart repository (injected by Marketplace)
         varType: string
-        required: true
+        defaultValue: oci://us-docker.pkg.dev/codsec-public/asp-charts
       - name: helm_chart_name
         description: Helm chart name (injected by Marketplace)
         varType: string
-        required: true
+        defaultValue: asp
       - name: helm_chart_version
         description: Helm chart version (injected by Marketplace)
         varType: string
-        required: true
+        defaultValue: 1.0.0
       - name: backend_image_repo
         description: Backend (primary) image repository, without tag
         varType: string
-        required: true
+        defaultValue: us-docker.pkg.dev/codsec-public/asp-charts/backend
       - name: backend_image_tag
         description: Backend image tag
         varType: string
-        required: true
+        defaultValue: "1.0"
       - name: frontend_image_repo
         description: Frontend image repository, without tag
         varType: string
-        required: true
+        defaultValue: us-docker.pkg.dev/codsec-public/asp-charts/frontend
       - name: frontend_image_tag
         description: Frontend image tag
         varType: string
-        required: true
+        defaultValue: "1.0"
       - name: domain
         description: Public domain for the chat UI (e.g. asp.example.com). Point its DNS at the ingress IP after deploy.
         varType: string
