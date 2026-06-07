@@ -6,7 +6,7 @@ metadata:
     config.kubernetes.io/local-config: "true"
 spec:
   info:
-    title: ASP - Google Cloud Marketplace Terraform Kubernetes app
+    title: CodSec ASP
     source:
       repo: https://github.com/CodSecIO/Codsec-asp-marketplace-envs.git
       sourceType: git

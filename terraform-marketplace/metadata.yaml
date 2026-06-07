@@ -6,7 +6,7 @@ metadata:
     config.kubernetes.io/local-config: "true"
 spec:
   info:
-    title: ASP - Google Cloud Marketplace Terraform Kubernetes app
+    title: CodSec ASP
     source:
       repo: https://github.com/CodSecIO/Codsec-asp-marketplace-envs.git
       sourceType: git
@@ -82,9 +82,9 @@ spec:
         varType: string
         defaultValue: us-central1
       - name: create_cluster
-        description: Create a dedicated GKE cluster. When false (default), ASP deploys onto the existing cluster named in cluster_name.
+        description: Create a dedicated GKE cluster (default). Set false to deploy onto the existing cluster named in cluster_name.
         varType: bool
-        defaultValue: false
+        defaultValue: true
       - name: cluster_name
         description: Existing cluster name (required when create_cluster = false). When create_cluster = true and this is empty, the name is derived as <deployment-name>-<environment>-gke.
         varType: string
@@ -102,9 +102,9 @@ spec:
         varType: bool
         defaultValue: false
       - name: zone
-        description: Zone for a zonal created cluster (e.g. us-central1-a). Empty picks the first available zone in the region.
+        description: Zone for the zonal created cluster. Must be in the selected region.
         varType: string
-        defaultValue: ""
+        defaultValue: us-central1-a
       - name: node_machine_type
         description: Machine type for the created cluster's node pool
         varType: string
@@ -118,9 +118,9 @@ spec:
         varType: number
         defaultValue: 5
       - name: create_network
-        description: Create a dedicated VPC (with subnet, GKE secondary ranges, and Private Services Access). When false (default), the existing network below is used and it MUST already have a Private Services Access connection for Cloud SQL private IP.
+        description: Create a dedicated VPC with subnet, GKE secondary ranges, and Private Services Access (default). When false, the existing network below is used and it MUST already have a Private Services Access connection for Cloud SQL private IP.
         varType: bool
-        defaultValue: false
+        defaultValue: true
       - name: network_name
         description: Existing VPC name (used when create_network = false)
         varType: string

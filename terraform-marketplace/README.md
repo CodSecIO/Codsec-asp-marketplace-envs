@@ -1,89 +1,50 @@
-# ASP - Google Cloud Marketplace Terraform Kubernetes app
+# CodSec ASP
 
-Marketplace product where customers deploy ASP through Infrastructure Manager.
-This is a **separate product** from the classic deployer in `marketplace/`
-(one listing cannot offer both deployment methods); both share the chart at
-`marketplace/chart/asp` - this module renders it with `postgres.bundled=false`.
+Deploys CodSec ASP from Google Cloud Marketplace via Infrastructure Manager:
+the application (chat UI, backend API, and an in-cluster Redis cache) on GKE,
+backed by a managed Cloud SQL PostgreSQL 16 instance (private IP, automated
+backups and point-in-time recovery, deletion protection enabled).
 
-**What the module deploys:** managed Cloud SQL PostgreSQL 16 (private IP,
-`deletion_protection` on) + the ASP chart (frontend, backend, in-cluster
-Redis). By default onto the customer's **existing** cluster and network
-(which must already have Private Services Access); `create_cluster` /
-`create_network` are opt-in for greenfield. `modules/` holds vendored copies
-of our production modules from `CodSecIO/terraform-modules` (private repo, so
-the code ships in the package) - every adjustment is commented in place.
+## Prerequisites
 
-## Releasing a new version (example: 1.2)
+- **None by default**: the deployment is self-contained - it creates a
+  dedicated VPC (with Private Services Access) and a GKE cluster, then
+  installs the app and the database.
+- To deploy onto **existing** infrastructure instead, set
+  `create_cluster = false` with `cluster_name`, and `create_network = false`
+  with your network/subnetwork names. An existing VPC must already have a
+  [Private Services Access](https://cloud.google.com/sql/docs/postgres/configure-private-services-access)
+  connection - Cloud SQL with a private IP requires it.
+- The deploying user needs: Service Usage Admin, Kubernetes Engine Admin,
+  Cloud SQL Admin, Compute Network Admin, Service Networking Admin, Secret
+  Manager Admin, Service Account Admin, Service Account User, and Cloud
+  Infrastructure Manager Admin.
 
-One-time tools: `gcloud` (CLI **and** `gcloud auth application-default login`
-- the Terraform provider uses ADC), `helm`, the `cft` CLI, and a **Terraform
-1.5.7 binary** - that exact version is what Marketplace validation and
-customer deploys run.
+## Key inputs
 
-1. **Change and verify the module** (hard rules: `required_version` must
-   allow 1.5.7; no cross-variable `validation` blocks (1.9+ feature); no
-   complex variable types - the Deploy Config UI rejects `map(any)` etc.;
-   every Marketplace-injected variable keeps a default so a bare plan works;
-   `goog_cm_deployment_name` must exist and prefix all resource names):
+| Variable | Purpose | Default |
+|---|---|---|
+| `domain` | Public domain for the chat UI | `asp.example.com` |
+| `create_cluster` | Create a dedicated GKE cluster | `true` |
+| `cluster_name` | Existing cluster (when `create_cluster = false`) | `""` |
+| `create_network` | Create a dedicated VPC | `true` |
+| `network_name` / `subnetwork_name` | Existing VPC and subnet (when `create_network = false`) | `default` |
+| `region` / `zone` | Location for created resources | `us-central1` |
+| `db_tier` | Cloud SQL machine tier | `db-custom-1-3840` |
+| `db_deletion_protection` | Protect the database from deletion | `true` |
 
-   ```bash
-   cd terraform-marketplace
-   cft blueprint metadata -p . -q -d --nested=false   # regen after ANY variable change
-   terraform-1.5.7 init -backend=false && terraform-1.5.7 validate
-   terraform-1.5.7 plan -var-file=marketplace_test.tfvars -var project_id=<test-project>
-   terraform-1.5.7 plan -var project_id=<test-project>   # bare plan must also pass
-   ```
+## After deployment
 
-2. **Tag the artifacts with the new Display Tag.** Chart and images must
-   carry the same MAJOR.MINOR tag, and images live as **siblings of the
-   chart, named by the `schema.yaml` keys** (`backend`, `frontend`):
+1. Find the Ingress IP: `kubectl get ingress -n <namespace>` (the namespace
+   is in the deployment outputs and defaults to the deployment name).
+2. Point the `domain` DNS A record at that IP. The Google-managed TLS
+   certificate provisions automatically once DNS resolves.
+3. Database connection details are wired into the app automatically; the
+   generated credentials are stored in Secret Manager in your project.
 
-   ```bash
-   for a in asp backend frontend; do
-     gcloud artifacts docker tags add \
-       us-docker.pkg.dev/codsec-public/asp-charts/$a:1.1 \
-       us-docker.pkg.dev/codsec-public/asp-charts/$a:1.2
-   done
-   ```
+**Deleting the deployment:** the Cloud SQL instance ships with
+`deletion_protection = true` - deleting the deployment intentionally fails
+until you disable it, so the database and its data are never destroyed by
+accident.
 
-   If the chart or images actually changed: `helm package` + `helm push`
-   (chart), and rebuild images with `--platform=linux/amd64
-   --provenance=false`, then add the **manifest annotation** (a Dockerfile
-   LABEL is not enough):
-
-   ```bash
-   crane mutate --annotation \
-     "com.googleapis.cloudmarketplace.product.service.name=services/asp-cloud-codsec.endpoints.codsec-public.cloud.goog" \
-     us-docker.pkg.dev/codsec-public/asp-charts/<image>:1.2
-   ```
-
-3. **Package the module.** The ZIP must contain `README.md`,
-   `metadata.yaml`, `metadata.display.yaml`, `schema.yaml`, and
-   `marketplace_test.tfvars`, and must contain **no `.terraform*` entry**
-   (the lock file included). Use a **new object name for every revision**:
-
-   ```bash
-   zip -r asp-tf-module-1.2.0.zip . -x '.terraform*' '*.tfstate*'
-   gcloud storage cp asp-tf-module-1.2.0.zip gs://codsec-asp-tf-module/
-   ```
-
-4. **Producer Portal** -> product -> Deployment configuration -> New
-   Release: Display Tag `1.2`, Version title `1.2.0`, module = the new ZIP
-   (Browse), required roles (Service Usage Admin, Kubernetes Engine Admin,
-   Cloud SQL Admin, Compute Network Admin, Service Networking Admin, Secret
-   Manager Admin, Service Account Admin, Service Account User, Cloud
-   Infrastructure Manager Admin), **Done** -> set Default -> **Save and
-   validate**.
-
-5. **Iterating on validation failures.** Marketplace snapshots the package
-   per version identity and the snapshot is immutable: every revision needs
-   a **new ZIP object name AND a new Version title** (`1.2.1`, `1.2.2`...).
-   If the error turns generic/masked ("Terraform plan command failed...
-   contact support"), stale failed versions are poisoning the report -
-   delete them; if it persists, mint a **fresh Display Tag** (step 2) and
-   rebuild the release there. Reproduce plan failures locally with the
-   1.5.7 binary, never a newer one.
-
-Validation only runs `terraform plan`. Before publishing a release to
-customers, run a real `terraform apply` (both existing-cluster and
-greenfield modes) on a throwaway project.
+Support: https://codsec.io

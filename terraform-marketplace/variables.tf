@@ -109,8 +109,8 @@ variable "region" {
 
 variable "create_cluster" {
   type        = bool
-  description = "Create a dedicated GKE cluster. When false (default), ASP deploys onto the existing cluster named in cluster_name."
-  default     = false
+  description = "Create a dedicated GKE cluster (default). Set false to deploy onto the existing cluster named in cluster_name."
+  default     = true
 }
 
 variable "cluster_name" {
@@ -139,8 +139,8 @@ variable "regional" {
 
 variable "zone" {
   type        = string
-  description = "Zone for a zonal created cluster (e.g. us-central1-a). Empty picks the first available zone in the region."
-  default     = ""
+  description = "Zone for the zonal created cluster. Must be in the selected region."
+  default     = "us-central1-a"
 }
 
 # Simple primitives instead of a node-pool map: the Marketplace Deploy Config
@@ -171,8 +171,8 @@ variable "node_max_count" {
 
 variable "create_network" {
   type        = bool
-  description = "Create a dedicated VPC (with subnet, GKE secondary ranges, and Private Services Access). When false (default), the existing network below is used and it MUST already have a Private Services Access connection for Cloud SQL private IP."
-  default     = false
+  description = "Create a dedicated VPC with subnet, GKE secondary ranges, and Private Services Access (default). When false, the existing network below is used and it MUST already have a Private Services Access connection for Cloud SQL private IP."
+  default     = true
 }
 
 variable "network_name" {
