@@ -52,8 +52,11 @@ module "gke" {
   depends_on = [module.project_services]
 }
 
+# Only read when an existing cluster is actually named - an empty name is a
+# plan-time error, and the validation harness may run with bare defaults.
+# The helm_release precondition enforces "create or name a cluster" at apply.
 data "google_container_cluster" "existing" {
-  count    = var.create_cluster ? 0 : 1
+  count    = !var.create_cluster && var.cluster_name != "" ? 1 : 0
   name     = var.cluster_name
   location = var.cluster_location != "" ? var.cluster_location : var.region
   project  = var.project_id
@@ -62,7 +65,15 @@ data "google_container_cluster" "existing" {
 }
 
 locals {
-  cluster_name     = var.create_cluster ? module.gke[0].cluster_name : var.cluster_name
-  cluster_endpoint = var.create_cluster ? "https://${module.gke[0].endpoint}" : "https://${data.google_container_cluster.existing[0].endpoint}"
-  cluster_ca       = var.create_cluster ? base64decode(module.gke[0].cluster_ca_certificate) : base64decode(data.google_container_cluster.existing[0].master_auth[0].cluster_ca_certificate)
+  cluster_name = var.create_cluster ? module.gke[0].cluster_name : var.cluster_name
+  cluster_endpoint = (
+    var.create_cluster ? "https://${module.gke[0].endpoint}" :
+    var.cluster_name != "" ? "https://${data.google_container_cluster.existing[0].endpoint}" :
+    "https://cluster-not-configured.invalid"
+  )
+  cluster_ca = (
+    var.create_cluster ? base64decode(module.gke[0].cluster_ca_certificate) :
+    var.cluster_name != "" ? base64decode(data.google_container_cluster.existing[0].master_auth[0].cluster_ca_certificate) :
+    ""
+  )
 }

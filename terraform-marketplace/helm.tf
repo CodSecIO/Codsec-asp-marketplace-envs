@@ -86,4 +86,9 @@ resource "helm_release" "asp" {
     module.gke,
     module.cloudsql,
   ]
+
+  # No precondition on "create_cluster or cluster_name": preconditions
+  # evaluate at plan time and would fail the bare validation run. With
+  # neither set, the helm provider points at a placeholder host and fails
+  # at apply - and the deploy form requires the cluster inputs anyway.
 }

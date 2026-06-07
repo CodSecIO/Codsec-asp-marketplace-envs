@@ -65,6 +65,9 @@ variable "frontend_image_tag" {
 variable "domain" {
   type        = string
   description = "Public domain for the chat UI (e.g. asp.example.com). Point its DNS at the ingress IP after deploy."
+  # Placeholder default so validation plans cleanly even if the harness
+  # supplies no tfvars; customers set their real domain in the deploy form.
+  default = "asp.example.com"
 }
 
 # Required by Marketplace UI deployments: injected with the deployment name
