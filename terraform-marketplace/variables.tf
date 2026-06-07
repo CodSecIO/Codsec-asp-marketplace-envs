@@ -10,16 +10,22 @@ variable "project_id" {
 variable "helm_chart_repo" {
   type        = string
   description = "Helm chart repository (injected by Marketplace)"
+  # Default = the published artifact; Marketplace injection overrides it.
+  default = "oci://us-docker.pkg.dev/codsec-public/asp-charts"
 }
 
 variable "helm_chart_name" {
   type        = string
   description = "Helm chart name (injected by Marketplace)"
+  # Default = the published artifact; Marketplace injection overrides it.
+  default = "asp"
 }
 
 variable "helm_chart_version" {
   type        = string
   description = "Helm chart version (injected by Marketplace)"
+  # Default = the published artifact; Marketplace injection overrides it.
+  default = "1.0.0"
 }
 
 # Declared in schema.yaml - Marketplace substitutes the published image paths.
@@ -27,21 +33,29 @@ variable "helm_chart_version" {
 variable "backend_image_repo" {
   type        = string
   description = "Backend (primary) image repository, without tag"
+  # Default = the published artifact; Marketplace injection overrides it.
+  default = "us-docker.pkg.dev/codsec-public/asp-charts/backend"
 }
 
 variable "backend_image_tag" {
   type        = string
   description = "Backend image tag"
+  # Default = the published artifact; Marketplace injection overrides it.
+  default = "1.0"
 }
 
 variable "frontend_image_repo" {
   type        = string
   description = "Frontend image repository, without tag"
+  # Default = the published artifact; Marketplace injection overrides it.
+  default = "us-docker.pkg.dev/codsec-public/asp-charts/frontend"
 }
 
 variable "frontend_image_tag" {
   type        = string
   description = "Frontend image tag"
+  # Default = the published artifact; Marketplace injection overrides it.
+  default = "1.0"
 }
 
 # --------------------------------------------------------------------------

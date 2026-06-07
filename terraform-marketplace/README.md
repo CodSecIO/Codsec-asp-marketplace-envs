@@ -65,10 +65,16 @@ project before submission.
    ```
 3. ZIP this directory (exclude `.terraform*` - the validator rejects ANY
    `.terraform*` entry, including `.terraform.lock.hcl` - and `*.tfstate*`)
-   and upload to a **versioned** GCS bucket in `codsec-public`. The release
-   pins the GCS object **generation**: after re-uploading, re-select the
-   object via Browse in the release, or validation keeps reading the old
-   generation.
+   and upload to a **versioned** GCS bucket in `codsec-public`.
+   **Package revision rules (learned from validation rounds):** Marketplace
+   snapshots the package per release **version identity** (Display Tag +
+   Version title) and the snapshot is immutable - re-selecting the same GCS
+   path, re-uploading, or deleting and recreating the release does NOT
+   refresh it. For every package revision: upload under a **new object name**
+   (`asp-tf-module-X.Y.Z-N.zip`) AND give the release a **new Version title**.
+   Validation runs Terraform **1.5.7** (`terraform plan --var-file
+   marketplace_test.tfvars`); reproduce failures locally with that exact
+   binary - generic plan errors are debuggable only that way.
 4. Producer Portal: product type **Terraform Kubernetes app**; Helm chart URL
    format `us-docker.pkg.dev/PROJECT/PRODUCT/CHART_NAME`; attach the module
    ZIP URI; map the image variables from `schema.yaml` so the entitlement
