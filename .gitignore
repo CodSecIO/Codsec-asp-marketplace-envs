@@ -48,3 +48,6 @@ terraform.rc
 # Optional: ignore plan files saved before destroying Terraform configuration
 # Uncomment the line below if you want to ignore planout files.
 # planout
+# Terraform lock file: not part of the Marketplace package (the validator
+# rejects any .terraform* entry) and 1.5.7/newer cores regenerate it anyway.
+.terraform.lock.hcl
