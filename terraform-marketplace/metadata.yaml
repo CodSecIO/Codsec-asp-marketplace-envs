@@ -60,7 +60,7 @@ spec:
       - name: domain
         description: Public domain for the chat UI (e.g. asp.example.com). Point its DNS at the ingress IP after deploy.
         varType: string
-        required: true
+        defaultValue: asp.example.com
       - name: goog_cm_deployment_name
         description: Deployment name; prefix applied to created resource names
         varType: string
