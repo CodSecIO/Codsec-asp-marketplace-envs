@@ -1,0 +1,13 @@
+images:
+  backend:
+    variables:
+      backend_image_repo:
+        type: REPO_WITH_REGISTRY_WITH_NAME
+      backend_image_tag:
+        type: TAG
+  frontend:
+    variables:
+      frontend_image_repo:
+        type: REPO_WITH_REGISTRY_WITH_NAME
+      frontend_image_tag:
+        type: TAG

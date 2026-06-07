@@ -18,6 +18,9 @@ crash.*.log
 # to change depending on the environment.
 *.tfvars
 *.tfvars.json
+# Required by Marketplace release validation (terraform plan --var-file);
+# contains no secrets - test toggles only.
+!terraform-marketplace/marketplace_test.tfvars
 
 # Ignore override files as they are usually used to override resources locally and so
 # are not checked in
