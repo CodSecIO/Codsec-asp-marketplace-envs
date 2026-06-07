@@ -56,13 +56,10 @@ variable "zones" {
   type        = list(string)
   default     = []
 
-  validation {
-    condition = (
-      var.regional == true ||
-      (var.regional == false && length(var.zones) == 1)
-    )
-    error_message = "Zonal clusters must specify exactly one zone. For multiple zones, use regional = true."
-  }
+  # Vendored copy: cross-variable validation removed - it referenced
+  # var.regional (Terraform >= 1.9 only; Marketplace runs 1.5.7). It also
+  # rejected the empty-zones case that locals.tf handles by picking the
+  # first available zone.
 }
 
 variable "kubernetes_version" {
@@ -379,16 +376,9 @@ variable "node_pools" {
     error_message = "strategy must be one of: SURGE, BLUE_GREEN, SHORT_LIVED for all node pools."
   }
 
-  validation {
-    condition = (
-      (var.global_node_pools_config.machine_type != null && var.global_node_pools_config.machine_type != "") ||
-      alltrue([
-        for pool_name, pool_config in var.node_pools :
-        pool_config.machine_type != null && pool_config.machine_type != ""
-      ])
-    )
-    error_message = "Either global_node_pools_config.machine_type must be specified, or ALL node pools must have machine_type specified."
-  }
+  # Vendored copy: cross-variable validation removed (referenced
+  # var.global_node_pools_config; Terraform >= 1.9 only, Marketplace runs
+  # 1.5.7). The root module always sets machine_type on every pool.
 }
 
 ####################################################

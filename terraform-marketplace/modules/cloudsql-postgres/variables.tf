@@ -105,10 +105,10 @@ variable "connector_enforcement" {
   type        = bool
   default     = false
 
-  validation {
-    condition     = (!var.connector_enforcement) || length(var.read_replicas) == 0
-    error_message = "connector_enforcement=true cannot be combined with read_replicas because Cloud SQL forbids creating replicas when connector enforcement is enabled. Either disable connector_enforcement or leave read_replicas empty."
-  }
+  # Vendored copy: cross-variable validation removed - it referenced
+  # var.read_replicas, which requires Terraform >= 1.9, and Marketplace /
+  # Infrastructure Manager run 1.5.7. Cloud SQL itself rejects the invalid
+  # combination at apply time.
 }
 
 # ============================================================================
