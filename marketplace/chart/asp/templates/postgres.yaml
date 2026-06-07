@@ -1,6 +1,8 @@
 # Bundled in-cluster Postgres. DEMO-GRADE: single replica, one PVC, no HA or
-# managed backups. Production deployments should point at a managed Postgres
-# (contact CodSec). Self-contained so the package installs without external deps.
+# managed backups. Self-contained so the classic package installs without
+# external deps. Disabled (postgres.bundled=false) by the Terraform Marketplace
+# product, which provisions managed Cloud SQL instead.
+{{- if .Values.postgres.bundled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -85,3 +87,4 @@ spec:
   ports:
     - port: 5432
       targetPort: 5432
+{{- end }}

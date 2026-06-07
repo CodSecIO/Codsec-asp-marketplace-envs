@@ -23,13 +23,20 @@ backend:
     tag: "1.0.0"
   replicas: 2
 
-# Bundled in-cluster dependencies (demo-grade: single replica, no HA/backups).
-# Production deployments should use managed Postgres/Redis - contact CodSec.
+# Postgres: bundled in-cluster by default (demo-grade: single replica, one PVC,
+# no HA/backups - used by the classic Marketplace product). The Terraform
+# Marketplace product sets bundled=false and injects managed Cloud SQL
+# connection values (host/port/password) instead.
 postgres:
+  bundled: true
   image: postgres:16-alpine
   database: asp
   user: asp
   storage: 8Gi
+  # External mode (bundled=false): connection to the managed instance.
+  host: ""
+  port: 5432
+  password: ""
 
 redis:
   image: redis:7-alpine
