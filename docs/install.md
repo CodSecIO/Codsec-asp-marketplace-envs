@@ -1,85 +1,63 @@
 # Install
 
-## 1. Configure
+The recommended path is the **Google Cloud Marketplace** listing: deploy from the ASP
+product page, choose your cluster and namespace, set the domain, and Marketplace mirrors
+the images into your project and runs the deployer.
+
+These steps cover the **command-line** alternative, installing the same Helm chart
+directly into an existing GKE cluster.
+
+## 1. Connect to your cluster
 
 ```bash
-export PROJECT_ID=your-gcp-project
-export REGION=us-central1
-export DOMAIN=asp.example.com
+gcloud container clusters get-credentials CLUSTER_NAME \
+  --location LOCATION --project PROJECT_ID
 ```
 
-## 2. Preflight
+## 2. Install
+
+The chart deploys the frontend, backend, and bundled in-cluster PostgreSQL and Redis. Set
+your domain; the database password and JWT secret are the only other inputs and can be
+generated on the spot. The frontend and backend image references default to the published
+CodSec images.
 
 ```bash
-./scripts/preflight.sh
+git clone https://github.com/CodSecIO/Codsec-asp-marketplace-envs
+cd Codsec-asp-marketplace-envs
+
+helm install asp marketplace/chart/asp \
+  --namespace asp --create-namespace \
+  --set domain=asp.example.com \
+  --set dbPassword="$(openssl rand -hex 16)" \
+  --set jwtSecret="$(openssl rand -hex 24)"
 ```
 
-Verifies `gcloud` auth, enables required APIs, and checks quotas.
+> The default images live in a private Artifact Registry. Make sure your GKE nodes can
+> pull them: Marketplace handles this automatically, and for a direct install you can
+> request access from CodSec or override `backend.image.repo` / `frontend.image.repo`.
 
-## 3. Provision infrastructure
+## 3. Point DNS at the load balancer
+
+Get the Ingress address and create an A record for your domain:
 
 ```bash
-cd terraform
-cp examples/terraform.tfvars.example terraform.tfvars
-# edit terraform.tfvars
-terraform init
-terraform apply
-cd ..
+kubectl -n asp get ingress asp -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
 ```
 
-Outputs:
-- `cluster_name` — GKE cluster
-- `db_connection_name` — CloudSQL instance
-- `redis_host` — Memorystore endpoint
-- `gateway_ip` — static IP for DNS
+## 4. Wait for the certificate
 
-## 4. Connect kubectl
+The GKE managed certificate is issued once your domain resolves to the load balancer;
+first provisioning can take up to an hour.
 
 ```bash
-gcloud container clusters get-credentials "$(terraform -chdir=terraform output -raw cluster_name)" \
-  --region "$REGION" --project "$PROJECT_ID"
+kubectl -n asp get managedcertificate asp-cert -o jsonpath='{.status.certificateStatus}'
 ```
 
-## 5. Create the backend secret
-
-The backend reads its configuration from a Kubernetes Secret you create yourself. The repo never ships secret values.
-
-```bash
-kubectl create namespace asp
-kubectl -n asp create secret generic asp-backend-env \
-  --from-literal=DATABASE_URL='postgresql+psycopg://USER:PASS@HOST/DB' \
-  --from-literal=REDIS_URL='redis://HOST:6379/0' \
-  --from-literal=JWT_SECRET='<random 32+ chars>'
-```
-
-Add any additional environment variables your subscription requires.
-
-## 6. Deploy applications
-
-```bash
-helm upgrade --install asp-backend ./helm/backend \
-  --namespace asp \
-  --set image.repository=YOUR_IMAGE_REPO/asp-backend \
-  --set image.tag=YOUR_VERSION \
-  --set ingress.host="api.$DOMAIN"
-
-helm upgrade --install asp-frontend ./helm/frontend \
-  --namespace asp \
-  --set image.repository=YOUR_IMAGE_REPO/asp-frontend \
-  --set image.tag=YOUR_VERSION \
-  --set ingress.host="$DOMAIN" \
-  --set backend.url="https://api.$DOMAIN"
-```
-
-## 7. DNS
-
-Point `$DOMAIN` and `api.$DOMAIN` at the `gateway_ip` from step 3.
-
-## 8. Verify
+## 5. Verify
 
 ```bash
 kubectl -n asp get pods
-curl https://api.$DOMAIN/healthz
+curl https://asp.example.com/api/health
 ```
 
-Open `https://$DOMAIN` in a browser.
+Then open `https://asp.example.com` in a browser.

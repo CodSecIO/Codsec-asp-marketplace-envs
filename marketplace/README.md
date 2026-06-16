@@ -91,8 +91,10 @@ Two product-code items (in `mcp-project` / `chat-ui-mcp-project`, which we own):
 
 Packaging items handled elsewhere:
 
-- The `com.googleapis.cloudmarketplace.product.service.name` image annotation is a
-  build-time `LABEL` on each image, so it goes in the `mcp-project` and
-  `chat-ui-mcp-project` build, not this repo (separate PRs).
+- The `com.googleapis.cloudmarketplace.product.service.name` image annotation must be a
+  manifest annotation (not a Dockerfile `LABEL`) on the deployer and every application
+  image, pointing at the product service name. Apply it with `crane mutate --annotation`,
+  or durably with `docker buildx build --annotation` in the `mcp-project` and
+  `chat-ui-mcp-project` pipelines. See `RELEASING.md`.
 - `mpdev verify` on a throwaway GKE cluster.
 - Producer Portal onboarding + image mirroring.

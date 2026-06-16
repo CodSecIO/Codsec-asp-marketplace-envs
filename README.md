@@ -1,33 +1,32 @@
-# ASP Marketplace Deployment
+# CodSec ASP - Google Cloud Marketplace deployment assets
 
-Public deployment assets for the **CodSec ASP** platform — a self-hosted chat UI plus backend API.
+Public deployment assets and documentation for the **CodSec ASP** (Agentic Security
+Platform) listing on Google Cloud Marketplace - a self-hosted chat UI plus backend API.
 
-This repository contains the **infrastructure-as-code** and Helm charts needed to deploy the ASP frontend and backend into your own Google Cloud project. Application source code and integrations are not included; this repo is the deployment glue only.
+This repository is the public reference that the Marketplace listing points at. The
+deployer package that Marketplace runs lives in [`marketplace/`](marketplace/).
 
 ## What gets deployed
 
-- **GKE Autopilot** cluster
-- **CloudSQL** PostgreSQL 16 instance
-- **Memorystore** Redis instance
-- **ASP backend** (FastAPI) — Helm chart
-- **ASP frontend** (Next.js chat UI) — Helm chart
+A single release into your GKE cluster:
 
-## Quickstart
+- **frontend** - Next.js chat UI, served at `/`
+- **backend** - FastAPI API, served at `/api` (health at `/api/health`)
+- **PostgreSQL** - bundled in-cluster (demo-grade: single replica, one PVC, no HA or backups)
+- **Redis** - bundled in-cluster (demo-grade: ephemeral cache)
 
-```bash
-# 1. Set required variables
-export PROJECT_ID=your-gcp-project
-export REGION=us-central1
-export DOMAIN=asp.example.com
+One domain, path-routed (`/api` to the backend, `/` to the frontend), HTTPS via a GKE
+managed certificate (HTTP is redirected to HTTPS). The only deploy-time inputs are the
+domain plus an auto-generated database password and JWT secret.
 
-# 2. Verify environment
-./scripts/preflight.sh
+> Bundled PostgreSQL and Redis are demo-grade. For production, point ASP at managed data
+> services - contact CodSec.
 
-# 3. Deploy infrastructure + apps
-./scripts/install.sh
-```
+## Deploy
 
-Full walkthrough: [docs/install.md](docs/install.md).
+- **Google Cloud Marketplace (recommended):** deploy from the ASP listing. Marketplace
+  mirrors the images into your project and runs the deployer.
+- **Command line:** see [docs/install.md](docs/install.md).
 
 ## Documentation
 
@@ -37,12 +36,14 @@ Full walkthrough: [docs/install.md](docs/install.md).
 
 ## Container images
 
-Container images for the frontend and backend are distributed separately. Set the image references in `helm/frontend/values.yaml` and `helm/backend/values.yaml` to the tags provided with your subscription.
+ASP frontend and backend images are distributed through your Marketplace subscription. To
+pull them directly for a command-line install, contact CodSec for Artifact Registry access.
 
 ## Support
 
-For licensing, image access, and support, contact CodSec at [support@codsec.io](mailto:support@codsec.io).
+For licensing, image access, and support, contact CodSec at
+[support@codsec.io](mailto:support@codsec.io).
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+Apache 2.0 - see [LICENSE](LICENSE).
