@@ -1,0 +1,46 @@
+# Creates the initial admin user after install so the customer can log in. Waits
+# for the backend, then registers `adminEmail`/`adminPassword` via the admin
+# api-key. Idempotent: a re-run on an existing user is treated as success.
+{{- if .Values.adminEmail }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-bootstrap
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "bootstrap") | nindent 4 }}
+spec:
+  backoffLimit: 6
+  template:
+    metadata:
+      labels:
+        {{- include "asp.componentLabels" (dict "Release" .Release "component" "bootstrap") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      volumes:
+        - name: script
+          configMap:
+            name: {{ .Release.Name }}-bootstrap
+      containers:
+        - name: bootstrap
+          image: "{{ .Values.backend.image.repo }}:{{ .Values.backend.image.tag }}"
+          command: ["python", "/scripts/bootstrap.py"]
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+          env:
+            - name: BACKEND
+              value: http://{{ .Release.Name }}-backend
+            - name: ADMIN_EMAIL
+              value: {{ .Values.adminEmail | quote }}
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-backend-env
+                  key: API_KEY
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-backend-env
+                  key: ADMIN_PASSWORD
+{{- end }}

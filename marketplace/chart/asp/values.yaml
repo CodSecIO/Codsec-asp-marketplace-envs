@@ -6,7 +6,11 @@
 
 publishedVersion: "1.0.0"
 
+# Public domain for the chat UI; the backend is served at /api on the same host.
 domain: asp.example.com
+
+# Initial admin account, created automatically after install by the bootstrap Job.
+adminEmail: ""
 
 frontend:
   image:
@@ -23,24 +27,25 @@ backend:
     tag: "1.0.0"
   replicas: 2
 
-# Postgres: bundled in-cluster by default (demo-grade: single replica, one PVC,
-# no HA/backups - used by the classic Marketplace product). The Terraform
-# Marketplace product sets bundled=false and injects managed Cloud SQL
-# connection values (host/port/password) instead.
+# Bundled in-cluster PostgreSQL (demo-grade: single replica, one PVC, no HA or
+# backups). Production deployments should point ASP at a managed PostgreSQL.
 postgres:
-  bundled: true
   image: postgres:16-alpine
   database: asp
   user: asp
   storage: 8Gi
-  # External mode (bundled=false): connection to the managed instance.
-  host: ""
-  port: 5432
-  password: ""
 
+# Bundled in-cluster Redis (demo-grade: ephemeral cache).
 redis:
   image: redis:7-alpine
 
-# Generated at deploy time by Marketplace (schema GENERATED_PASSWORD).
+# Generated at deploy time by Marketplace (schema GENERATED_PASSWORD); set here
+# only so the chart renders standalone.
 dbPassword: ""
 jwtSecret: ""
+apiKey: ""
+adminPassword: ""
+
+# Optional LLM provider key so the chat agent works (default provider is Google
+# GenAI). Without it the app installs and you can log in, but sending a chat fails.
+googleApiKey: ""

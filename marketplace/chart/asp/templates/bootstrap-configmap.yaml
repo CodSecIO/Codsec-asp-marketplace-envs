@@ -1,0 +1,60 @@
+# Script for the bootstrap Job: creates the first admin user. A fresh DB has no
+# users, and /register requires an authenticated caller, so we use the admin
+# api-key (env API_KEY) to register the initial account. Idempotent.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-bootstrap
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.labels" . | nindent 4 }}
+data:
+  bootstrap.py: |
+    import json, os, time, urllib.request, urllib.error
+
+    base = os.environ["BACKEND"].rstrip("/")
+    api_key = os.environ["API_KEY"]
+    email = os.environ["ADMIN_EMAIL"]
+    password = os.environ["ADMIN_PASSWORD"]
+
+    def call(path, method="GET", body=None, headers=None):
+        data = json.dumps(body).encode() if body is not None else None
+        h = {"Content-Type": "application/json"}
+        if headers:
+            h.update(headers)
+        req = urllib.request.Request(base + path, data=data, method=method, headers=h)
+        return urllib.request.urlopen(req, timeout=15)
+
+    # 1) wait for the backend to start serving
+    for _ in range(120):
+        try:
+            call("/api/health")
+            print("backend healthy", flush=True)
+            break
+        except Exception as e:
+            print("waiting for backend:", e, flush=True)
+            time.sleep(5)
+    else:
+        raise SystemExit("backend did not become healthy")
+
+    # 2) create the first admin (retry until migrations have run; idempotent)
+    payload = {"email": email, "username": email, "password": password,
+               "real_name": "Administrator", "avatar": ""}
+    for _ in range(60):
+        try:
+            r = call("/api/auth/local/register", "POST", payload, {"api-key": api_key})
+            print("admin created:", r.status, flush=True)
+            break
+        except urllib.error.HTTPError as e:
+            msg = e.read().decode("utf-8", "ignore")[:300]
+            if "exist" in msg.lower() or "already" in msg.lower():
+                print("admin already exists, ok", flush=True)
+                break
+            print("register retry:", e.code, msg, flush=True)
+            time.sleep(5)
+        except Exception as e:
+            print("register retry (conn):", e, flush=True)
+            time.sleep(5)
+    else:
+        raise SystemExit("could not create admin user")
+    print("bootstrap complete", flush=True)

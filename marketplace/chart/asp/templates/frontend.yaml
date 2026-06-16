@@ -27,8 +27,6 @@ spec:
           env:
             - name: SERVER_HOST
               value: "https://{{ .Values.domain }}"
-            # TODO: the app-configs route also reads APP_NAMES, DEFAULT_APP_NAME,
-            # DEFAULT_AGENT, LOGO_URL, etc. Wire these (schema inputs) before submit.
           readinessProbe:
             httpGet:
               path: /
