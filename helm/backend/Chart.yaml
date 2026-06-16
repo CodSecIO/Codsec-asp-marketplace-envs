@@ -1,6 +1,0 @@
-apiVersion: v2
-name: asp-backend
-description: ASP backend API (FastAPI) — deployment chart
-type: application
-version: 0.1.0
-appVersion: "0.1.0"

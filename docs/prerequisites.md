@@ -2,35 +2,31 @@
 
 ## Tools
 
-- `gcloud` CLI ≥ 470
-- `kubectl` ≥ 1.29
-- `helm` ≥ 3.14
-- `terraform` ≥ 1.6
+- `gcloud` CLI
+- `kubectl`
+- `helm` 3.x
 
 ## GCP
 
-- A GCP project with billing enabled
-- Project owner (or equivalent) IAM on first install
-- The following APIs enabled (the preflight script will enable them):
-  - `container.googleapis.com`
-  - `sqladmin.googleapis.com`
-  - `redis.googleapis.com`
-  - `compute.googleapis.com`
-  - `servicenetworking.googleapis.com`
-  - `iam.googleapis.com`
+- A GKE cluster (Standard or Autopilot) you can deploy into
+- Permission to create a namespace and workloads in that cluster
 
-## Quotas (default region)
+The chart uses GKE Ingress (`gce`), a `ManagedCertificate`, and a `FrontendConfig` for
+HTTPS; these are available on GKE by default.
 
-| Resource | Minimum |
-|----------|---------|
-| In-use IP addresses | 4 |
-| CPUs | 8 |
-| Persistent Disk SSD (GB) | 100 |
+## Cluster capacity
+
+The release runs the frontend (2 replicas), the backend (2 replicas), and one pod each
+for the bundled PostgreSQL and Redis. A small default node pool is enough for an
+evaluation.
 
 ## DNS
 
-A domain you control, with the ability to add an A record pointing to the load balancer IP produced by Terraform.
+A domain you control, with the ability to add an A record pointing at the Ingress load
+balancer IP created during install.
 
 ## Container images
 
-Frontend and backend image tags will be provided by CodSec. Make sure your GKE nodes can pull them (the included setup uses public Artifact Registry; private registries require an additional `imagePullSecret` — see [install.md](install.md)).
+ASP frontend and backend images come with your Marketplace subscription. For a
+command-line install that pulls them directly, contact CodSec at support@codsec.io for
+Artifact Registry access.

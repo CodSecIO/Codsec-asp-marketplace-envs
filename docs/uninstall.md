@@ -1,18 +1,9 @@
 # Uninstall
 
 ```bash
-./scripts/uninstall.sh
-```
-
-Or manually:
-
-```bash
-helm -n asp uninstall asp-frontend
-helm -n asp uninstall asp-backend
+helm -n asp uninstall asp
 kubectl delete namespace asp
-
-cd terraform
-terraform destroy
 ```
 
-> **Warning:** `terraform destroy` deletes the CloudSQL instance and all data. Take a backup first if you need to retain anything.
+> **Warning:** deleting the namespace removes the bundled PostgreSQL PersistentVolumeClaim
+> and all data in it. Back up anything you need first.
