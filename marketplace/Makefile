@@ -1,34 +1,45 @@
-# Build and test the ASP Marketplace deployer.
-# Requires: docker, helm, and mpdev (github.com/GoogleCloudPlatform/marketplace-k8s-app-tools).
+# Build, annotate, and test the ASP Marketplace deployer.
+# Requires: docker (with buildx), helm, crane, and mpdev
+# (github.com/GoogleCloudPlatform/marketplace-k8s-app-tools).
 
 REGISTRY ?= us-docker.pkg.dev/codsec-public/asp-deployer
 APP      ?= asp
 TRACK    ?= 1.0
 VERSION  ?= 1.0.0
+SERVICE  ?= services/asp-codsec.endpoints.codsec-public.cloud.goog
 
-DEPLOYER := $(REGISTRY)/$(APP)/deployer
+DEPLOYER   := $(REGISTRY)/$(APP)/deployer
+ANNOTATION := com.googleapis.cloudmarketplace.product.service.name=$(SERVICE)
 
-.PHONY: lint deployer verify
+.PHONY: lint deployer annotate verify
 
-# helm lint + render the chart locally with default values (no Marketplace substitution).
+# helm lint + render the chart with the required inputs (no Marketplace substitution).
 lint:
 	helm lint chart/asp
-	helm template asp chart/asp >/dev/null && echo "template OK"
+	helm template asp chart/asp \
+	  --set domain=example.com --set adminEmail=admin@example.com \
+	  --set dbPassword=x --set jwtSecret=x --set apiKey=x --set 'adminPassword=Abc12345!def' \
+	  >/dev/null && echo "template OK"
 
-# Build and push the deployer image. The onbuild base packages chart/ + schema.yaml;
-# REGISTRY/TAG are passed for the base image's schema envsubst step. Build context
-# is this directory (it holds chart/ and schema.yaml).
-# NOTE: each service image (chat-ui, secops-agent) must also carry the
-# annotation com.googleapis.cloudmarketplace.product.service.name=services/<name>
-# before submission; that is done where those images are built, not here.
+# Build and push the deployer image. The onbuild base bakes a SNAPSHOT of chart/ +
+# schema.yaml into the image, so rebuild after ANY change under chart/ or schema.yaml.
+# amd64 single-manifest (--provenance=false) so it runs on GKE nodes and `crane mutate`
+# can annotate it. Build context is this directory (it holds chart/ and schema.yaml).
 deployer:
-	docker build \
+	docker buildx build --platform linux/amd64 --provenance=false \
 	  --build-arg REGISTRY=$(REGISTRY) --build-arg TAG=$(VERSION) \
 	  -t $(DEPLOYER):$(TRACK) -t $(DEPLOYER):$(VERSION) \
-	  -f deployer/Dockerfile .
-	docker push $(DEPLOYER):$(TRACK)
-	docker push $(DEPLOYER):$(VERSION)
+	  -f deployer/Dockerfile --push .
 
-# Install + verify against the current kube context (a throwaway test cluster).
+# Marketplace requires the product service name as an image MANIFEST ANNOTATION on the
+# deployer (a Dockerfile LABEL is not enough). Re-run after every `make deployer`.
+# The app images (asp, asp/frontend) carry the same annotation, applied in their own
+# build pipelines (mcp-project / chat-ui-mcp-project) via `buildx --annotation`.
+annotate:
+	crane mutate $(DEPLOYER):$(TRACK) --annotation "$(ANNOTATION)" --label "$(ANNOTATION)"
+	crane tag $(DEPLOYER):$(TRACK) $(VERSION)
+
+# Install + verify against the current kube context (a throwaway GKE cluster). The
+# apptest overlay supplies headless defaults for the required domain/adminEmail.
 verify:
 	mpdev verify --deployer=$(DEPLOYER):$(TRACK)

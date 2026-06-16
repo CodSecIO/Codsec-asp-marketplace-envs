@@ -1,62 +1,66 @@
 # Releasing the ASP classic Marketplace product (internal runbook)
 
-> Maintainer documentation. The customer-facing deployer package is in `marketplace/`.
+> Maintainer / DevOps handoff doc. The customer-facing deployer package is in
+> `marketplace/`. All commands below run from `marketplace/`.
 
 The product is a Google Cloud Marketplace **classic Kubernetes app**: customers deploy
 ASP into their own GKE cluster, and the deployer installs the Helm chart in
-`marketplace/chart/asp` (frontend, backend, bundled in-cluster PostgreSQL and Redis).
+`marketplace/chart/asp` - frontend, backend, bundled in-cluster PostgreSQL + Redis, a
+migration Job (`alembic upgrade head`), and a bootstrap Job that creates the first admin.
 
 Producer Portal product (project `codsec-public`): service name
-`asp-codsec.endpoints.codsec-public.cloud.goog`. Images live in
+`asp-codsec.endpoints.codsec-public.cloud.goog`. Images in
 `us-docker.pkg.dev/codsec-public/asp-deployer`:
 
 - `asp` - backend (the primary image)
 - `asp/frontend` - frontend
-- `asp/deployer` - the deployer
+- `asp/deployer` - the deployer (bakes a snapshot of the chart; see below)
 
-## 1. Build and lint
+## What a customer deploys, and the inputs
 
-```bash
-cd marketplace
-make lint                     # helm lint + template
-make deployer                 # docker build + push the deployer image (track + version tags)
-```
+Console one-click from the listing, or the CLI path in `docs/install.md`. Inputs:
+`domain` and `adminEmail` are required; `adminPassword`, `dbPassword`, `jwtSecret`, and
+the admin `apiKey` are generated if left blank; `googleApiKey` is optional (the chat
+agent needs it). On install the migration Job runs, then the bootstrap Job registers the
+admin via the api-key, so the customer logs in at `https://<domain>` with
+`adminEmail` / `adminPassword`.
 
-## 2. Annotate every image with the product service name
+## CRITICAL: the deployer image bakes the chart
 
-Marketplace requires a manifest **annotation** (a Dockerfile `LABEL` is not enough) on the
-deployer and every application image, pointing at the product's service name:
+`deployer/Dockerfile` is `FROM .../deployer_helm/onbuild`, which COPIES `chart/` +
+`schema.yaml` INTO the image at build time. The Marketplace deployer runs that baked
+snapshot, NOT this repo. So after ANY change under `chart/` or `schema.yaml` you MUST
+rebuild the deployer image, re-annotate it, and re-point the Portal release. Editing the
+repo alone changes nothing that customers run.
 
-```bash
-SVC=services/asp-codsec.endpoints.codsec-public.cloud.goog
-for img in asp asp/frontend asp/deployer; do
-  crane mutate "us-docker.pkg.dev/codsec-public/asp-deployer/$img:1.0" \
-    --annotation "com.googleapis.cloudmarketplace.product.service.name=$SVC"
-done
-```
+## Release steps
 
-The durable fix is `docker buildx build --annotation ...` in the image pipelines
-(`mcp-project` for the backend, `chat-ui-mcp-project` for the frontend).
+Tools: docker (with buildx), helm, crane, mpdev.
 
-## 3. Verify
+1. **Lint:** `make lint`
+2. **Build + push the deployer** (amd64, single-manifest so it runs on GKE and crane can
+   annotate it): `make deployer`
+3. **Annotate** the deployer with the product service name - a manifest annotation, not a
+   Dockerfile LABEL: `make annotate`
+   - If you also rebuilt an app image, re-annotate it the same way:
+     `crane mutate <image>:1.0 --annotation com.googleapis.cloudmarketplace.product.service.name=services/asp-codsec.endpoints.codsec-public.cloud.goog`
+4. **Verify** on a throwaway GKE cluster: `make verify` (installs the deployer, runs the
+   apptest tester, uninstalls). The apptest overlay (`apptest/deployer/schema.yaml`)
+   supplies headless defaults for `domain` / `adminEmail`.
+5. **Producer Portal** (codsec-public):
+   - Container images -> Deployer image URL
+     `us-docker.pkg.dev/codsec-public/asp-deployer/asp/deployer`.
+   - New Release: Display Tag `1.0`, Version title `1.0`. Confirm the **deployer digest**
+     matches the one you just pushed ("Change Deployer Image" and re-enter if you rebuilt).
+   - Public git repo URL = this repo; Deploy documentation URL = `docs/install.md`.
+   - Submit the Container Images review early - it can take two or more weeks.
 
-```bash
-mpdev verify --deployer=us-docker.pkg.dev/codsec-public/asp-deployer/asp/deployer:1.0
-```
-
-Run against a throwaway GKE cluster. Marketplace validation installs and uninstalls the
-deployer, so a green `mpdev verify` is the best pre-submit signal.
-
-## 4. Producer Portal
-
-1. Container images -> Deployer image URL
-   `us-docker.pkg.dev/codsec-public/asp-deployer/asp/deployer` -> Specify Releases.
-2. New Release: Display Tag `1.0`, Version title `1.0`. Fill the public git repo URL (this
-   repo) and the deploy documentation URL (`docs/install.md`). Submit the Container Images
-   review early - it can take two or more weeks.
-3. Product details: set a Support URL or contact (`support@codsec.io`) and submit the
-   Product details review.
-
-> Marketplace snapshots a release immutably per Display Tag plus Version. If you change an
+> Marketplace snapshots a release immutably per Display Tag + Version. If you change an
 > image, that produces a new digest (re-annotate it) and needs a new release; re-pushing
 > the same tag does not refresh a release that was already submitted.
+
+## Verified
+
+The chart was deployed end-to-end on a GKE cluster: postgres -> migration Job -> backend
+running -> bootstrap creates the admin -> admin login returns a JWT. `helm lint` and
+`kubeconform` pass.
