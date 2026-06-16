@@ -1,0 +1,44 @@
+# Runs the database schema migrations. The backend does NOT migrate on startup,
+# and a fresh bundled Postgres is empty, so this Job applies `alembic upgrade head`
+# (which also seeds the default tenant + role that make the first login work).
+# Alembic reads the same discrete POSTGRES_* vars (no POSTGRES_ECHO) from /agent.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-migrate
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "migrate") | nindent 4 }}
+spec:
+  backoffLimit: 12
+  template:
+    metadata:
+      labels:
+        {{- include "asp.componentLabels" (dict "Release" .Release "component" "migrate") | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: wait-postgres
+          image: {{ .Values.postgres.image }}
+          command: ["sh", "-c", "until pg_isready -h {{ .Release.Name }}-postgres -p 5432 -U {{ .Values.postgres.user }}; do echo 'waiting for postgres'; sleep 3; done"]
+      containers:
+        - name: migrate
+          image: "{{ .Values.backend.image.repo }}:{{ .Values.backend.image.tag }}"
+          workingDir: /agent
+          command: ["alembic", "upgrade", "head"]
+          env:
+            - name: PYTHONPATH
+              value: /agent
+            - name: POSTGRES_HOST
+              value: {{ .Release.Name }}-postgres
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.user | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-backend-env
+                  key: POSTGRES_PASSWORD

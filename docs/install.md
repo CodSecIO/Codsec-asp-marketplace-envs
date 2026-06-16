@@ -1,8 +1,8 @@
 # Install
 
 The recommended path is the **Google Cloud Marketplace** listing: deploy from the ASP
-product page, choose your cluster and namespace, set the domain, and Marketplace mirrors
-the images into your project and runs the deployer.
+product page, choose your cluster and namespace, set the domain and admin email, and
+Marketplace mirrors the images into your project and runs the deployer.
 
 These steps cover the **command-line** alternative, installing the same Helm chart
 directly into an existing GKE cluster.
@@ -16,10 +16,14 @@ gcloud container clusters get-credentials CLUSTER_NAME \
 
 ## 2. Install
 
-The chart deploys the frontend, backend, and bundled in-cluster PostgreSQL and Redis. Set
-your domain; the database password and JWT secret are the only other inputs and can be
-generated on the spot. The frontend and backend image references default to the published
-CodSec images.
+The chart deploys the frontend, backend, and bundled in-cluster PostgreSQL and Redis,
+runs the database migrations, and creates your first admin user automatically.
+
+Set your domain and admin email. The admin password is the login you'll use - it must be
+at least 12 characters with an upper case letter, a lower case letter, a digit, and a
+symbol. The database password, JWT secret, and admin API key can be generated on the
+spot. A Google API key is optional: without it the app installs and you can log in, but
+the chat agent won't respond.
 
 ```bash
 git clone https://github.com/CodSecIO/Codsec-asp-marketplace-envs
@@ -28,8 +32,12 @@ cd Codsec-asp-marketplace-envs
 helm install asp marketplace/chart/asp \
   --namespace asp --create-namespace \
   --set domain=asp.example.com \
+  --set adminEmail=admin@yourcompany.com \
+  --set adminPassword='ChooseAStr0ng!Password' \
+  --set googleApiKey=YOUR_GOOGLE_API_KEY \
   --set dbPassword="$(openssl rand -hex 16)" \
-  --set jwtSecret="$(openssl rand -hex 24)"
+  --set jwtSecret="$(openssl rand -hex 24)" \
+  --set apiKey="$(openssl rand -hex 24)"
 ```
 
 > The default images live in a private Artifact Registry. Make sure your GKE nodes can
@@ -38,11 +46,11 @@ helm install asp marketplace/chart/asp \
 
 ## 3. Point DNS at the load balancer
 
-Get the Ingress address and create an A record for your domain:
-
 ```bash
 kubectl -n asp get ingress asp -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
 ```
+
+Create an A record for your domain pointing at that IP.
 
 ## 4. Wait for the certificate
 
@@ -53,11 +61,12 @@ first provisioning can take up to an hour.
 kubectl -n asp get managedcertificate asp-cert -o jsonpath='{.status.certificateStatus}'
 ```
 
-## 5. Verify
+## 5. Log in
+
+Open `https://asp.example.com` and sign in with the `adminEmail` / `adminPassword` you
+set at install. To check the backend directly:
 
 ```bash
 kubectl -n asp get pods
 curl https://asp.example.com/api/health
 ```
-
-Then open `https://asp.example.com` in a browser.

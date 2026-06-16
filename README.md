@@ -16,8 +16,10 @@ A single release into your GKE cluster:
 - **Redis** - bundled in-cluster (demo-grade: ephemeral cache)
 
 One domain, path-routed (`/api` to the backend, `/` to the frontend), HTTPS via a GKE
-managed certificate (HTTP is redirected to HTTPS). The only deploy-time inputs are the
-domain plus an auto-generated database password and JWT secret.
+managed certificate (HTTP is redirected to HTTPS). On install the chart runs the database
+migrations and creates your admin user automatically, so you can log in right away. You
+set the domain and an admin email/password; the database password, JWT secret, and admin
+API key are generated, and a Google API key is optional (the chat agent needs it).
 
 > Bundled PostgreSQL and Redis are demo-grade. For production, point ASP at managed data
 > services - contact CodSec.

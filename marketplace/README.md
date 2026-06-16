@@ -3,7 +3,7 @@
 Google Cloud Marketplace **classic Kubernetes app** package for CodSec ASP.
 
 This is the one-click install path for the Marketplace listing. The repo root
-(Terraform + docs) remains the public reference deploy and the required public
+(docs) remains the public reference deploy and the required public
 documentation URL; this `marketplace/` directory is the deployer package.
 
 ## Model
@@ -12,8 +12,10 @@ documentation URL; this `marketplace/` directory is the deployer package.
 - PostgreSQL and Redis are **bundled in-cluster** (demo-grade: single replica,
   one PVC for Postgres, no HA or managed backups). This keeps the package
   self-contained so it installs with no external prerequisites. Production
-  deployments should point at managed data services - contact CodSec. The only
-  deploy-time inputs are `domain` (+ auto-generated `dbPassword` / `jwtSecret`).
+  deployments should point at managed data services - contact CodSec. The required
+  inputs are `domain` and `adminEmail`; `adminPassword`, `dbPassword`, `jwtSecret`,
+  and the admin `apiKey` are auto-generated if left blank, and `googleApiKey` is
+  optional (the chat agent needs it).
 - Two app images + bundled data services:
 
   | Service | Image | Port |
@@ -30,6 +32,10 @@ documentation URL; this `marketplace/` directory is the deployer package.
   > resolved (see Open items). Re-add `secops`/`secopsMcp.image` and the
   > `secops-mcp.yaml` template when it is.
 
+- On install a migration Job runs `alembic upgrade head` and a bootstrap Job creates
+  the first admin user (`adminEmail`/`adminPassword`) via the backend admin api-key,
+  so the customer can log in immediately. The backend reads discrete `POSTGRES_*` /
+  `REDIS_*` env set by the chart, not a connection URL.
 - One domain, path-routed: `/api` -> backend, `/` -> frontend. The chat UI reads
   `SERVER_HOST` at runtime and calls `${SERVER_HOST}/api` same-origin; the backend
   serves under `/api` (health at `/api/health`).
@@ -51,9 +57,12 @@ marketplace/
       application.yaml         # Application CRD (required by Marketplace)
       backend.yaml frontend.yaml secret.yaml
       postgres.yaml redis.yaml # bundled in-cluster data services
+      migrate-job.yaml         # alembic upgrade head (schema migrations)
+      bootstrap-job.yaml bootstrap-configmap.yaml  # creates the first admin user
       ingress.yaml             # ManagedCertificate + FrontendConfig + path-routed Ingress
       networkpolicy.yaml       # default-deny scaffold (currently inert; see note above)
   apptest/deployer/asp/        # tester Pod for `mpdev verify`
+  apptest/deployer/schema.yaml # verify-only defaults (domain, adminEmail)
 ```
 
 ## Build and verify (run by a human against a test GKE cluster)

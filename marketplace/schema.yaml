@@ -27,6 +27,11 @@ x-google-marketplace:
 
   # Namespaced Role scoped to exactly what the deployer creates.
   deployerServiceAccount:
+    description: >-
+      Creates and manages the ASP application resources in the install namespace:
+      Deployments, Services, Secrets, a ConfigMap, a PersistentVolumeClaim, the
+      schema-migration and bootstrap Jobs, an Ingress with a GKE ManagedCertificate
+      and FrontendConfig, a NetworkPolicy, and the Application custom resource.
     roles:
       - type: Role
         rulesType: CUSTOM
@@ -34,10 +39,13 @@ x-google-marketplace:
           - apiGroups: ["apps"]
             resources: ["deployments"]
             verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+          - apiGroups: ["batch"]
+            resources: ["jobs"]
+            verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
           # pods + pods/log are required so the deployer SA can apply and watch
           # the apptest tester Pod during `mpdev verify`.
           - apiGroups: [""]
-            resources: ["services", "secrets", "pods", "persistentvolumeclaims"]
+            resources: ["services", "secrets", "configmaps", "pods", "persistentvolumeclaims"]
             verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
           - apiGroups: [""]
             resources: ["pods/log"]
@@ -66,8 +74,36 @@ properties:
     type: string
     title: Public domain for the chat UI (e.g. asp.example.com)
 
-  # Postgres + Redis are bundled in-cluster, so there are no connection inputs.
-  # Only the DB password is generated; everything else has chart defaults.
+  adminEmail:
+    type: string
+    title: Initial admin email (used to log in after install)
+
+  adminPassword:
+    type: string
+    title: Initial admin password (generated if left blank)
+    x-google-marketplace:
+      type: GENERATED_PASSWORD
+      generatedPassword:
+        # Symbols included so it satisfies the backend password policy
+        # (>=12 chars, upper + lower + digit + special).
+        length: 16
+        includeSymbols: true
+        base64: false
+
+  googleApiKey:
+    type: string
+    title: Google API key for the chat agent (optional; chat is disabled without it)
+
+  apiKey:
+    type: string
+    title: Backend admin API key (generated; used to bootstrap the first user)
+    x-google-marketplace:
+      type: GENERATED_PASSWORD
+      generatedPassword:
+        length: 32
+        includeSymbols: false
+        base64: false
+
   dbPassword:
     type: string
     title: Bundled PostgreSQL password (generated if left blank)
@@ -84,13 +120,14 @@ properties:
     x-google-marketplace:
       type: GENERATED_PASSWORD
       generatedPassword:
-        length: 48
-        includeSymbols: false
         # false: the raw value flows into the Secret stringData (which the API
         # server base64-encodes once). base64:true would double-encode here.
+        length: 48
+        includeSymbols: false
         base64: false
 
 required:
   - name
   - namespace
   - domain
+  - adminEmail

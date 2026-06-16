@@ -15,18 +15,43 @@ spec:
       labels:
         {{- include "asp.componentLabels" (dict "Release" .Release "component" "backend") | nindent 8 }}
     spec:
+      initContainers:
+        # Backend lifespan does a DB connection check at startup and aborts if
+        # Postgres isn't reachable, so wait for it before starting.
+        - name: wait-postgres
+          image: {{ .Values.postgres.image }}
+          command: ["sh", "-c", "until pg_isready -h {{ .Release.Name }}-postgres -p 5432 -U {{ .Values.postgres.user }}; do echo 'waiting for postgres'; sleep 3; done"]
       containers:
         - name: backend
           image: "{{ .Values.backend.image.repo }}:{{ .Values.backend.image.tag }}"
           ports:
             - name: http
               containerPort: 8000
+          # Sensitive values (POSTGRES_PASSWORD, JWT_SECRET, API_KEY, GOOGLE_API_KEY)
+          # come from the Secret; the discrete non-secret config is set inline.
+          # The app reads these discrete vars (NOT a DATABASE_URL/REDIS_URL).
           envFrom:
             - secretRef:
                 name: {{ .Release.Name }}-backend-env
           env:
+            - name: API_PORT
+              value: "8000"
             - name: MCP_ENVIRONMENT_TYPE
               value: "prod"
+            - name: POSTGRES_HOST
+              value: {{ .Release.Name }}-postgres
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.user | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database | quote }}
+            - name: POSTGRES_ECHO
+              value: "false"
+            - name: REDIS_HOST
+              value: {{ .Release.Name }}-redis
+            - name: REDIS_PORT
+              value: "6379"
           readinessProbe:
             httpGet:
               path: /api/health
