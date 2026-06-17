@@ -33,15 +33,21 @@ backend:
 
 # Bundled in-cluster PostgreSQL (demo-grade: single replica, one PVC, no HA or
 # backups). Production deployments should point ASP at a managed PostgreSQL.
+# Image is republished into our registry and declared in schema.yaml (Marketplace
+# requires all deployed images to be declared + parameterized).
 postgres:
-  image: postgres:16-alpine
+  image:
+    repo: us-docker.pkg.dev/codsec-public/asp-deployer/asp/postgres
+    tag: "1.0.0"
   database: asp
   user: asp
   storage: 8Gi
 
 # Bundled in-cluster Redis (demo-grade: ephemeral cache).
 redis:
-  image: redis:7-alpine
+  image:
+    repo: us-docker.pkg.dev/codsec-public/asp-deployer/asp/redis
+    tag: "1.0.0"
 
 # Generated at deploy time by Marketplace (schema GENERATED_PASSWORD); set here
 # only so the chart renders standalone.

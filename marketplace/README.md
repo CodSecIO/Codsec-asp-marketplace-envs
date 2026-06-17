@@ -59,8 +59,7 @@ marketplace/
       postgres.yaml redis.yaml # bundled in-cluster data services
       migrate-job.yaml         # alembic upgrade head (schema migrations)
       bootstrap-job.yaml bootstrap-configmap.yaml  # creates the first admin user
-      ingress.yaml             # ManagedCertificate + FrontendConfig + path-routed Ingress
-      networkpolicy.yaml       # default-deny scaffold (currently inert; see note above)
+      ingress.yaml             # ManagedCertificate + FrontendConfig + Ingress (gated on ingress.enabled)
   apptest/deployer/asp/        # tester Pod for `mpdev verify`
   apptest/deployer/schema.yaml # verify-only defaults (domain, adminEmail)
 ```
@@ -86,7 +85,7 @@ Two product-code items (in `mcp-project` / `chat-ui-mcp-project`, which we own):
   `export const runtime = 'edge'`, which in self-hosted standalone only reads
   runtime env via an undocumented startup snapshot. Change it to `runtime = 'nodejs'`
   (the default) for a reliable request-time read. One-line fix.
-- **secops-mcp registration — BLOCKED, MCP dropped from this package for now.** The
+- **secops-mcp registration - BLOCKED, MCP dropped from this package for now.** The
   backend resolves a self-hosted MCP's URL by convention as
   `http://<app>.tools-<permission_set_id>-<ENV>.svc.cluster.local:8000` (per-tenant,
   provisioned dynamically by the asp-infrastructure-orchestrator). A static bundle
@@ -94,8 +93,8 @@ Two product-code items (in `mcp-project` / `chat-ui-mcp-project`, which we own):
   ship a pod that is never reached, secops-mcp is removed from the chart/schema and
   the package ships frontend + backend only. To bring it back, `secops` must be
   registered as `remote=true` with `MCP_URL=http://<name>-secops-mcp:8000` (plus
-  MCP_URL validators + AUTH_TYPE) so the backend uses the remote-MCP path — a
-  backend migration/seed change in mcp-project — then re-add the image declaration,
+  MCP_URL validators + AUTH_TYPE) so the backend uses the remote-MCP path - a
+  backend migration/seed change in mcp-project - then re-add the image declaration,
   values, and `secops-mcp.yaml` template here.
 
 Packaging items handled elsewhere:

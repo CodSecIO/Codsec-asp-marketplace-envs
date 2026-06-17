@@ -17,13 +17,20 @@ spec:
         {{- include "asp.componentLabels" (dict "Release" .Release "component" "migrate") | nindent 8 }}
     spec:
       restartPolicy: Never
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       initContainers:
         - name: wait-postgres
-          image: {{ .Values.postgres.image }}
+          image: "{{ .Values.postgres.image.repo }}:{{ .Values.postgres.image.tag }}"
           command: ["sh", "-c", "until pg_isready -h {{ .Release.Name }}-postgres -p 5432 -U {{ .Values.postgres.user }}; do echo 'waiting for postgres'; sleep 3; done"]
       containers:
         - name: migrate
           image: "{{ .Values.backend.image.repo }}:{{ .Values.backend.image.tag }}"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           workingDir: /agent
           command: ["alembic", "upgrade", "head"]
           env:

@@ -17,9 +17,12 @@ spec:
       labels:
         {{- include "asp.componentLabels" (dict "Release" .Release "component" "redis") | nindent 8 }}
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: redis
-          image: {{ .Values.redis.image }}
+          image: "{{ .Values.redis.image.repo }}:{{ .Values.redis.image.tag }}"
           ports:
             - name: redis
               containerPort: 6379

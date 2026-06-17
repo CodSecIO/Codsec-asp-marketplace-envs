@@ -17,6 +17,9 @@ spec:
         {{- include "asp.componentLabels" (dict "Release" .Release "component" "bootstrap") | nindent 8 }}
     spec:
       restartPolicy: Never
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
         - name: script
           configMap:
@@ -24,6 +27,10 @@ spec:
       containers:
         - name: bootstrap
           image: "{{ .Values.backend.image.repo }}:{{ .Values.backend.image.tag }}"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           command: ["python", "/scripts/bootstrap.py"]
           volumeMounts:
             - name: script
