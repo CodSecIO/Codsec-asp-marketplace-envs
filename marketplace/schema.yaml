@@ -50,6 +50,10 @@ x-google-marketplace:
           - apiGroups: [""]
             resources: ["pods/log"]
             verbs: ["get"]
+          # The deployer reads its target namespace during setup.
+          - apiGroups: [""]
+            resources: ["namespaces"]
+            verbs: ["get"]
           - apiGroups: ["networking.k8s.io"]
             resources: ["ingresses", "networkpolicies"]
             verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
