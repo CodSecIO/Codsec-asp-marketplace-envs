@@ -12,6 +12,10 @@ domain: asp.example.com
 # Initial admin account, created automatically after install by the bootstrap Job.
 adminEmail: ""
 
+# Create the GKE Ingress + managed TLS certificate. Disable to front ASP with your own ingress/LB.
+ingress:
+  enabled: true
+
 frontend:
   image:
     # Additional image: lives under the primary image's app root.

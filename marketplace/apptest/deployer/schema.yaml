@@ -10,3 +10,8 @@ properties:
   adminEmail:
     type: string
     default: admin@example.com
+  # No real DNS in verification, so the managed cert never provisions and the
+  # Ingress never reports ready - skip it so wait_for_ready can converge.
+  ingress.enabled:
+    type: boolean
+    default: false
