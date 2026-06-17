@@ -9,21 +9,20 @@ documentation URL; this `marketplace/` directory is the deployer package.
 ## Model
 
 - Classic Kubernetes app: the deployer installs in-cluster resources only.
-- PostgreSQL and Redis are **bundled in-cluster** (demo-grade: single replica,
-  one PVC for Postgres, no HA or managed backups). This keeps the package
-  self-contained so it installs with no external prerequisites. Production
-  deployments should point at managed data services - contact CodSec. The required
-  inputs are `domain` and `adminEmail`; `adminPassword`, `dbPassword`, `jwtSecret`,
-  and the admin `apiKey` are auto-generated if left blank, and `googleApiKey` is
-  optional (the chat agent needs it).
-- Two app images + bundled data services:
+- **Bring-your-own data services.** ASP connects to a customer-provided PostgreSQL 16
+  and Redis (managed or self-run); the package does not run them in-cluster. The
+  customer enters connection details at deploy time. Required inputs: `domain`,
+  `adminEmail`, `db.host`, `db.password`, `redis.host`. `db.port`/`db.user`/`db.name`
+  and `redis.port` have defaults; `redis.password`/`redis.tls` are optional;
+  `adminPassword`, `jwtSecret`, and the admin `apiKey` are auto-generated if left blank;
+  `googleApiKey` is optional (the chat agent needs it). The backend connects to
+  PostgreSQL **without TLS**, so the database must accept non-TLS connections.
+- Two app images:
 
   | Service | Image | Port |
   |---------|-------|------|
   | frontend (Next.js chat UI) | `chat-ui` | 3000 |
   | backend (FastAPI) | `secops-agent` | 8000 |
-  | postgres (bundled) | `postgres:16-alpine` | 5432 |
-  | redis (bundled) | `redis:7-alpine` | 6379 |
 
   > **secops-mcp is deprecated in this package for now.** The backend discovers
   > MCP servers from a DB `applications` table by per-tenant convention, and this
@@ -55,13 +54,12 @@ marketplace/
     Chart.yaml values.yaml
     templates/
       application.yaml         # Application CRD (required by Marketplace)
-      backend.yaml frontend.yaml secret.yaml
-      postgres.yaml redis.yaml # bundled in-cluster data services
+      backend.yaml frontend.yaml secret.yaml  # connect to BYO postgres/redis via discrete env
       migrate-job.yaml         # alembic upgrade head (schema migrations)
       bootstrap-job.yaml bootstrap-configmap.yaml  # creates the first admin user
       ingress.yaml             # ManagedCertificate + FrontendConfig + Ingress (gated on ingress.enabled)
-  apptest/deployer/asp/        # tester Pod for `mpdev verify`
-  apptest/deployer/schema.yaml # verify-only defaults (domain, adminEmail)
+  apptest/deployer/asp/        # tester Pod + verify-only ephemeral postgres/redis for `mpdev verify`
+  apptest/deployer/schema.yaml # verify-only defaults (domain, adminEmail, db/redis -> the ephemeral fixtures)
 ```
 
 ## Build and verify (run by a human against a test GKE cluster)

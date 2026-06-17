@@ -20,10 +20,11 @@ spec:
           type: RuntimeDefault
       initContainers:
         # Backend lifespan does a DB connection check at startup and aborts if
-        # Postgres isn't reachable, so wait for it before starting.
+        # Postgres isn't reachable, so wait for it first. Uses the backend image
+        # (which has python) for a TCP probe - no separate DB image to pull.
         - name: wait-postgres
-          image: "{{ .Values.postgres.image.repo }}:{{ .Values.postgres.image.tag }}"
-          command: ["sh", "-c", "until pg_isready -h {{ .Release.Name }}-postgres -p 5432 -U {{ .Values.postgres.user }}; do echo 'waiting for postgres'; sleep 3; done"]
+          image: "{{ .Values.backend.image.repo }}:{{ .Values.backend.image.tag }}"
+          command: ["sh", "-c", "until python -c \"import socket; socket.create_connection(('{{ .Values.db.host }}', {{ .Values.db.port }}), 3)\" 2>/dev/null; do echo 'waiting for db'; sleep 3; done"]
       containers:
         - name: backend
           image: "{{ .Values.backend.image.repo }}:{{ .Values.backend.image.tag }}"
@@ -43,24 +44,33 @@ spec:
             - name: MCP_ENVIRONMENT_TYPE
               value: "prod"
             - name: POSTGRES_HOST
-              value: {{ .Release.Name }}-postgres
+              value: {{ .Values.db.host | quote }}
             - name: POSTGRES_PORT
-              value: "5432"
+              value: {{ .Values.db.port | quote }}
             - name: POSTGRES_USER
-              value: {{ .Values.postgres.user | quote }}
+              value: {{ .Values.db.user | quote }}
             - name: POSTGRES_DB
-              value: {{ .Values.postgres.database | quote }}
+              value: {{ .Values.db.name | quote }}
             - name: POSTGRES_ECHO
               value: "false"
             - name: REDIS_HOST
-              value: {{ .Release.Name }}-redis
+              value: {{ .Values.redis.host | quote }}
             - name: REDIS_PORT
-              value: "6379"
+              value: {{ .Values.redis.port | quote }}
+            - name: REDIS_USE_TLS
+              value: {{ .Values.redis.tls | quote }}
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-backend-env
                   key: POSTGRES_PASSWORD
+            {{- if .Values.redis.password }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-backend-env
+                  key: REDIS_PASSWORD
+            {{- end }}
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:

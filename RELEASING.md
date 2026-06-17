@@ -5,8 +5,9 @@
 
 The product is a Google Cloud Marketplace **classic Kubernetes app**: customers deploy
 ASP into their own GKE cluster, and the deployer installs the Helm chart in
-`marketplace/chart/asp` - frontend, backend, bundled in-cluster PostgreSQL + Redis, a
-migration Job (`alembic upgrade head`), and a bootstrap Job that creates the first admin.
+`marketplace/chart/asp` - frontend, backend, a migration Job (`alembic upgrade head`), and
+a bootstrap Job that creates the first admin. PostgreSQL + Redis are **bring-your-own**
+(the customer supplies connection details; nothing data-tier runs in-cluster).
 
 Producer Portal product (project `codsec-public`): service name
 `asp-codsec.endpoints.codsec-public.cloud.goog`. Images in
@@ -19,11 +20,13 @@ Producer Portal product (project `codsec-public`): service name
 ## What a customer deploys, and the inputs
 
 Console one-click from the listing, or the CLI path in `docs/install.md`. Inputs:
-`domain` and `adminEmail` are required; `adminPassword`, `dbPassword`, `jwtSecret`, and
-the admin `apiKey` are generated if left blank; `googleApiKey` is optional (the chat
-agent needs it). On install the migration Job runs, then the bootstrap Job registers the
-admin via the api-key, so the customer logs in at `https://<domain>` with
-`adminEmail` / `adminPassword`.
+`domain`, `adminEmail`, and the PostgreSQL + Redis connection details (`db.host`,
+`db.password`, `redis.host` required; `db.port`/`db.user`/`db.name`/`redis.port` default;
+`redis.password`/`redis.tls` optional) are required; `adminPassword`, `jwtSecret`, and the
+admin `apiKey` are generated if left blank; `googleApiKey` is optional (the chat agent
+needs it). The backend connects to PostgreSQL without TLS. On install the migration Job
+runs, then the bootstrap Job registers the admin via the api-key, so the customer logs in
+at `https://<domain>` with `adminEmail` / `adminPassword`.
 
 ## CRITICAL: the deployer image bakes the chart
 
@@ -43,14 +46,17 @@ Tools: docker (with buildx), helm, crane, mpdev.
 3. **Annotate** the deployer with the product service name - a manifest annotation, not a
    Dockerfile LABEL: `make annotate`
    - If you also rebuilt an app image, re-annotate it the same way:
-     `crane mutate <image>:1.0 --annotation com.googleapis.cloudmarketplace.product.service.name=services/asp-codsec.endpoints.codsec-public.cloud.goog`
+     `crane mutate <image>:1.1 --annotation com.googleapis.cloudmarketplace.product.service.name=services/asp-codsec.endpoints.codsec-public.cloud.goog`
 4. **Verify** on a throwaway GKE cluster: `make verify` (installs the deployer, runs the
    apptest tester, uninstalls). The apptest overlay (`apptest/deployer/schema.yaml`)
-   supplies headless defaults for `domain` / `adminEmail`.
+   supplies headless defaults for `domain` / `adminEmail` and points the `db`/`redis`
+   inputs at the ephemeral PostgreSQL + Redis fixtures the apptest chart spins up (so verify
+   exercises the real BYO path without needing an external database). Use a STANDARD
+   pre-provisioned cluster - Autopilot churns the burst of pods.
 5. **Producer Portal** (codsec-public):
    - Container images -> Deployer image URL
      `us-docker.pkg.dev/codsec-public/asp-deployer/asp/deployer`.
-   - New Release: Display Tag `1.0`, Version title `1.0`. Confirm the **deployer digest**
+   - New Release: Display Tag `1.1`, Version title `1.1.0`. Confirm the **deployer digest**
      matches the one you just pushed ("Change Deployer Image" and re-enter if you rebuilt).
    - Public git repo URL = this repo; Deploy documentation URL = `docs/install.md`.
    - Submit the Container Images review early - it can take two or more weeks.
@@ -61,6 +67,7 @@ Tools: docker (with buildx), helm, crane, mpdev.
 
 ## Verified
 
-The chart was deployed end-to-end on a GKE cluster: postgres -> migration Job -> backend
-running -> bootstrap creates the admin -> admin login returns a JWT. `helm lint` and
-`kubeconform` pass.
+`make verify` installs the deployer on a standard GKE cluster, where the apptest chart
+brings up ephemeral PostgreSQL + Redis that the BYO inputs point at, then runs the flow
+end-to-end: migration Job -> backend Ready -> bootstrap creates the admin -> tester checks
+`/api/health` + the frontend -> teardown. `helm lint` and `kubeconform` pass.

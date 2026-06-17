@@ -2,13 +2,13 @@ x-google-marketplace:
   schemaVersion: v2
   applicationApiVersion: v1beta1
   # Full semver of this release; rendered into the Application CRD version.
-  # Distinct from the rolling image track tag (e.g. 1.0).
-  publishedVersion: "1.0.0"
+  # Distinct from the rolling image track tag (e.g. 1.1).
+  publishedVersion: "1.1.0"
   publishedVersionMetadata:
     releaseNote: >-
-      Initial Marketplace release of CodSec ASP: chat UI and backend API, with
-      bundled in-cluster PostgreSQL and Redis (demo-grade; contact CodSec for
-      production-managed data services).
+      CodSec ASP: chat UI and backend API. Bring your own managed PostgreSQL 16
+      and Redis - their connection details are deploy-time inputs (the package no
+      longer bundles in-cluster data services).
 
   images:
     # Main image: backend (secops-agent). Empty key is the primary image.
@@ -24,28 +24,14 @@ x-google-marketplace:
           type: REPO_WITH_REGISTRY
         frontend.image.tag:
           type: TAG
-    # Bundled data services are republished too - Marketplace requires every
-    # deployed image to be declared and parameterized.
-    postgres:
-      properties:
-        postgres.image.repo:
-          type: REPO_WITH_REGISTRY
-        postgres.image.tag:
-          type: TAG
-    redis:
-      properties:
-        redis.image.repo:
-          type: REPO_WITH_REGISTRY
-        redis.image.tag:
-          type: TAG
 
   # Namespaced Role scoped to exactly what the deployer creates.
   deployerServiceAccount:
     description: >-
       Creates and manages the ASP application resources in the install namespace:
-      Deployments, Services, Secrets, a ConfigMap, a PersistentVolumeClaim, the
-      schema-migration and bootstrap Jobs, an Ingress with a GKE ManagedCertificate
-      and FrontendConfig, a NetworkPolicy, and the Application custom resource.
+      Deployments, Services, Secrets, a ConfigMap, the schema-migration and
+      bootstrap Jobs, an Ingress with a GKE ManagedCertificate and FrontendConfig,
+      and the Application custom resource.
     roles:
       - type: Role
         rulesType: CUSTOM
@@ -60,7 +46,7 @@ x-google-marketplace:
           # the apptest tester Pod during `mpdev verify`.
           # serviceaccounts: the deployer's post-test cleanup deletes its own SA by label.
           - apiGroups: [""]
-            resources: ["services", "secrets", "configmaps", "serviceaccounts", "pods", "persistentvolumeclaims"]
+            resources: ["services", "secrets", "configmaps", "serviceaccounts", "pods"]
             verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
           - apiGroups: [""]
             resources: ["pods/log"]
@@ -92,6 +78,52 @@ properties:
   domain:
     type: string
     title: Public domain for the chat UI (e.g. asp.example.com)
+
+  # Bring-your-own data services. ASP connects to a managed PostgreSQL 16 and a
+  # Redis that you provision and reach from the cluster - the package does not run
+  # them in-cluster. The backend connects to Postgres without TLS, so the database
+  # must accept non-TLS connections (e.g. Cloud SQL over private IP).
+  db.host:
+    type: string
+    title: PostgreSQL host (hostname or IP reachable from the cluster)
+  db.port:
+    type: integer
+    title: PostgreSQL port
+    default: 5432
+    minimum: 1
+    maximum: 65535
+  db.user:
+    type: string
+    title: PostgreSQL user
+    default: asp
+  db.name:
+    type: string
+    title: PostgreSQL database name
+    default: asp
+  db.password:
+    type: string
+    title: PostgreSQL password
+    x-google-marketplace:
+      type: MASKED_FIELD
+
+  redis.host:
+    type: string
+    title: Redis host (hostname or IP reachable from the cluster)
+  redis.port:
+    type: integer
+    title: Redis port
+    default: 6379
+    minimum: 1
+    maximum: 65535
+  redis.password:
+    type: string
+    title: Redis password (optional; leave blank if Redis has no auth)
+    x-google-marketplace:
+      type: MASKED_FIELD
+  redis.tls:
+    type: boolean
+    title: Connect to Redis over TLS
+    default: false
 
   adminEmail:
     type: string
@@ -128,16 +160,6 @@ properties:
         includeSymbols: false
         base64: false
 
-  dbPassword:
-    type: string
-    title: Bundled PostgreSQL password (generated if left blank)
-    x-google-marketplace:
-      type: GENERATED_PASSWORD
-      generatedPassword:
-        length: 32
-        includeSymbols: false
-        base64: false
-
   jwtSecret:
     type: string
     title: JWT signing secret (generated if left blank)
@@ -154,4 +176,7 @@ required:
   - name
   - namespace
   - domain
+  - db.host
+  - db.password
+  - redis.host
   - adminEmail

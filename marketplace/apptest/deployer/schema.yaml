@@ -2,7 +2,7 @@
 # properties that have no default in the main schema.yaml, so the app can be
 # installed headlessly during verification. Production installs still require the
 # user to enter these. GENERATED_PASSWORD properties (adminPassword/apiKey/
-# dbPassword/jwtSecret) are auto-filled by the verifier, so they need no default.
+# jwtSecret) are auto-filled by the verifier, so they need no default.
 properties:
   domain:
     type: string
@@ -15,3 +15,15 @@ properties:
   ingress.enabled:
     type: boolean
     default: false
+  # Point the BYO connection inputs at the ephemeral verify-db / verify-redis
+  # fixtures (apptest/deployer/asp/templates). db.user/db.name/db.port use their
+  # main-schema defaults (asp/asp/5432), which match the fixture's credentials.
+  db.host:
+    type: string
+    default: asp-verify-db
+  db.password:
+    type: string
+    default: verifypass
+  redis.host:
+    type: string
+    default: asp-verify-redis

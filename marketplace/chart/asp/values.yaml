@@ -2,9 +2,9 @@
 # overrides the image repo/tag fields and injects name/namespace + the inputs
 # declared in schema.yaml at deploy time. The image tags below are placeholders
 # for local render only; Marketplace substitutes the real published repo/tag
-# (track 1.0 / version 1.0.0) at deploy time.
+# (track 1.1 / version 1.1.0) at deploy time.
 
-publishedVersion: "1.0.0"
+publishedVersion: "1.1.0"
 
 # Public domain for the chat UI; the backend is served at /api on the same host.
 domain: asp.example.com
@@ -20,7 +20,7 @@ frontend:
   image:
     # Additional image: lives under the primary image's app root.
     repo: us-docker.pkg.dev/codsec-public/asp-deployer/asp/frontend
-    tag: "1.0.0"
+    tag: "1.1.0"
   replicas: 2
 
 backend:
@@ -28,30 +28,28 @@ backend:
     # Primary image (schema empty key ""): sits AT the app root; the deployer
     # lives at <root>/deployer and additional images at <root>/<name>.
     repo: us-docker.pkg.dev/codsec-public/asp-deployer/asp
-    tag: "1.0.0"
+    tag: "1.1.0"
   replicas: 2
 
-# Bundled in-cluster PostgreSQL (demo-grade: single replica, one PVC, no HA or
-# backups). Production deployments should point ASP at a managed PostgreSQL.
-# Image is republished into our registry and declared in schema.yaml (Marketplace
-# requires all deployed images to be declared + parameterized).
-postgres:
-  image:
-    repo: us-docker.pkg.dev/codsec-public/asp-deployer/asp/postgres
-    tag: "1.0.0"
-  database: asp
+# Bring-your-own managed PostgreSQL 16. Marketplace injects these from the
+# schema inputs; the placeholders below only let the chart render standalone.
+# The backend connects without TLS, so the database must accept non-TLS connections.
+db:
+  host: ""
+  port: 5432
   user: asp
-  storage: 8Gi
+  name: asp
+  password: ""
 
-# Bundled in-cluster Redis (demo-grade: ephemeral cache).
+# Bring-your-own Redis. password/tls are optional (Memorystore Basic has neither).
 redis:
-  image:
-    repo: us-docker.pkg.dev/codsec-public/asp-deployer/asp/redis
-    tag: "1.0.0"
+  host: ""
+  port: 6379
+  password: ""
+  tls: false
 
 # Generated at deploy time by Marketplace (schema GENERATED_PASSWORD); set here
 # only so the chart renders standalone.
-dbPassword: ""
 jwtSecret: ""
 apiKey: ""
 adminPassword: ""
