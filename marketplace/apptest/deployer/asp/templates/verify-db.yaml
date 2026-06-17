@@ -1,0 +1,65 @@
+# Verify-only ephemeral PostgreSQL. NOT part of the product: it exists solely so
+# `mpdev verify` has a database to point the BYO inputs at. It is pulled straight
+# from Docker Hub (not a declared/republished product image) and uses emptyDir
+# (throwaway). The apptest schema overlay sets db.host/db.user/db.name/db.password
+# to match the fixed Service name + literal credentials below. No verification
+# annotation, so it deploys together with the app (the tester runs after readiness).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asp-verify-db
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: asp-verify-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: asp-verify-db
+  template:
+    metadata:
+      labels:
+        app: asp-verify-db
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: asp
+            - name: POSTGRES_DB
+              value: asp
+            - name: POSTGRES_PASSWORD
+              value: verifypass
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "asp", "-d", "asp"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: asp-verify-db
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: asp-verify-db
+spec:
+  selector:
+    app: asp-verify-db
+  ports:
+    - port: 5432
+      targetPort: 5432

@@ -4,8 +4,8 @@
 
 REGISTRY ?= us-docker.pkg.dev/codsec-public/asp-deployer
 APP      ?= asp
-TRACK    ?= 1.0
-VERSION  ?= 1.0.0
+TRACK    ?= 1.1
+VERSION  ?= 1.1.0
 SERVICE  ?= services/asp-codsec.endpoints.codsec-public.cloud.goog
 
 DEPLOYER   := $(REGISTRY)/$(APP)/deployer
@@ -18,7 +18,8 @@ lint:
 	helm lint chart/asp
 	helm template asp chart/asp \
 	  --set domain=example.com --set adminEmail=admin@example.com \
-	  --set dbPassword=x --set jwtSecret=x --set apiKey=x --set 'adminPassword=Abc12345!def' \
+	  --set db.host=db --set db.password=x --set redis.host=r \
+	  --set jwtSecret=x --set apiKey=x --set 'adminPassword=Abc12345!def' \
 	  >/dev/null && echo "template OK"
 
 # Build and push the deployer image. The onbuild base bakes a SNAPSHOT of chart/ +

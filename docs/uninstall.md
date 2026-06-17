@@ -5,5 +5,5 @@ helm -n asp uninstall asp
 kubectl delete namespace asp
 ```
 
-> **Warning:** deleting the namespace removes the bundled PostgreSQL PersistentVolumeClaim
-> and all data in it. Back up anything you need first.
+This removes the ASP workloads only. Your PostgreSQL and Redis are external and are left
+untouched - the schema and data ASP wrote remain in your database until you drop them.
