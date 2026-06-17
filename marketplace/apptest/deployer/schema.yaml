@@ -24,6 +24,11 @@ properties:
   db.password:
     type: string
     default: verifypass
+    # Must repeat the main schema's x-google-marketplace block unchanged -
+    # overlay_test_schema rejects dropping/changing the type (it replaces the
+    # whole property, so the default rides alongside the same MASKED_FIELD type).
+    x-google-marketplace:
+      type: MASKED_FIELD
   redis.host:
     type: string
     default: asp-verify-redis
