@@ -34,9 +34,12 @@ spec:
       labels:
         {{- include "asp.componentLabels" (dict "Release" .Release "component" "postgres") | nindent 8 }}
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: postgres
-          image: {{ .Values.postgres.image }}
+          image: "{{ .Values.postgres.image.repo }}:{{ .Values.postgres.image.tag }}"
           ports:
             - name: postgres
               containerPort: 5432

@@ -11,9 +11,16 @@ metadata:
     app.kubernetes.io/name: {{ .Release.Name }}
 spec:
   restartPolicy: Never
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
   containers:
     - name: tester
       image: curlimages/curl:8.10.1
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
       command: ["/bin/sh", "-c"]
       args:
         - |

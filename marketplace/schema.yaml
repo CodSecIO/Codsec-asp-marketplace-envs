@@ -24,6 +24,20 @@ x-google-marketplace:
           type: REPO_WITH_REGISTRY
         frontend.image.tag:
           type: TAG
+    # Bundled data services are republished too - Marketplace requires every
+    # deployed image to be declared and parameterized.
+    postgres:
+      properties:
+        postgres.image.repo:
+          type: REPO_WITH_REGISTRY
+        postgres.image.tag:
+          type: TAG
+    redis:
+      properties:
+        redis.image.repo:
+          type: REPO_WITH_REGISTRY
+        redis.image.tag:
+          type: TAG
 
   # Namespaced Role scoped to exactly what the deployer creates.
   deployerServiceAccount:
@@ -56,7 +70,7 @@ x-google-marketplace:
             resources: ["namespaces"]
             verbs: ["get"]
           - apiGroups: ["networking.k8s.io"]
-            resources: ["ingresses", "networkpolicies"]
+            resources: ["ingresses"]
             verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
           - apiGroups: ["networking.gke.io"]
             resources: ["managedcertificates", "frontendconfigs"]

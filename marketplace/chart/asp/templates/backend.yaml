@@ -15,24 +15,28 @@ spec:
       labels:
         {{- include "asp.componentLabels" (dict "Release" .Release "component" "backend") | nindent 8 }}
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       initContainers:
         # Backend lifespan does a DB connection check at startup and aborts if
         # Postgres isn't reachable, so wait for it before starting.
         - name: wait-postgres
-          image: {{ .Values.postgres.image }}
+          image: "{{ .Values.postgres.image.repo }}:{{ .Values.postgres.image.tag }}"
           command: ["sh", "-c", "until pg_isready -h {{ .Release.Name }}-postgres -p 5432 -U {{ .Values.postgres.user }}; do echo 'waiting for postgres'; sleep 3; done"]
       containers:
         - name: backend
           image: "{{ .Values.backend.image.repo }}:{{ .Values.backend.image.tag }}"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           ports:
             - name: http
               containerPort: 8000
-          # Sensitive values (POSTGRES_PASSWORD, JWT_SECRET, API_KEY, GOOGLE_API_KEY)
-          # come from the Secret; the discrete non-secret config is set inline.
-          # The app reads these discrete vars (NOT a DATABASE_URL/REDIS_URL).
-          envFrom:
-            - secretRef:
-                name: {{ .Release.Name }}-backend-env
+          # The app reads discrete env (NOT a DATABASE_URL/REDIS_URL). Secrets come
+          # from explicit keyRefs so ADMIN_PASSWORD (only the bootstrap Job needs it)
+          # is never pulled into the backend's environment.
           env:
             - name: API_PORT
               value: "8000"
@@ -52,6 +56,28 @@ spec:
               value: {{ .Release.Name }}-redis
             - name: REDIS_PORT
               value: "6379"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-backend-env
+                  key: POSTGRES_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-backend-env
+                  key: JWT_SECRET
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-backend-env
+                  key: API_KEY
+            {{- if .Values.googleApiKey }}
+            - name: GOOGLE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-backend-env
+                  key: GOOGLE_API_KEY
+            {{- end }}
           readinessProbe:
             httpGet:
               path: /api/health

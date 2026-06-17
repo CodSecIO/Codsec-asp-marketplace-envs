@@ -44,6 +44,9 @@ helm install asp marketplace/chart/asp \
 > pull them: Marketplace handles this automatically, and for a direct install you can
 > request access from CodSec or override `backend.image.repo` / `frontend.image.repo`.
 
+> To front ASP with your own ingress or load balancer, add `--set ingress.enabled=false`
+> and skip steps 3-4 (DNS + managed certificate).
+
 ## 3. Point DNS at the load balancer
 
 ```bash
