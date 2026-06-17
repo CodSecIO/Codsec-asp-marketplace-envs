@@ -23,7 +23,11 @@ spec:
       initContainers:
         - name: wait-postgres
           image: "{{ .Values.backend.image.repo }}:{{ .Values.backend.image.tag }}"
-          command: ["sh", "-c", "until python -c \"import socket; socket.create_connection(('{{ .Values.db.host }}', {{ .Values.db.port }}), 3)\" 2>/dev/null; do echo 'waiting for db'; sleep 3; done"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          command: ["sh", "-c", "n=0; until python -c \"import socket; socket.create_connection(('{{ .Values.db.host }}', {{ .Values.db.port }}), 3)\"; do n=$((n+1)); [ $n -ge 60 ] && { echo \"ERROR: postgres {{ .Values.db.host }}:{{ .Values.db.port }} unreachable after 3m - check db.host/db.port and network reachability\" >&2; exit 1; }; echo \"waiting for db {{ .Values.db.host }}:{{ .Values.db.port }} ($n/60)\"; sleep 3; done"]
       containers:
         - name: migrate
           image: "{{ .Values.backend.image.repo }}:{{ .Values.backend.image.tag }}"

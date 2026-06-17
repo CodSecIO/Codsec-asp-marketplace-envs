@@ -1,5 +1,3 @@
-{{- define "asp.name" -}}{{ .Release.Name }}{{- end -}}
-
 {{/* Common labels. app.kubernetes.io/name is the Application CR selector. */}}
 {{- define "asp.labels" -}}
 app.kubernetes.io/name: {{ .Release.Name }}

@@ -47,7 +47,10 @@ data:
             break
         except urllib.error.HTTPError as e:
             msg = e.read().decode("utf-8", "ignore")[:300]
-            if "exist" in msg.lower() or "already" in msg.lower():
+            # A duplicate user is a 400 "already exists" - a prior run created the
+            # admin, so treat it as success. Anything else (e.g. a 500 while the
+            # migrate Job is still creating tables) is a real failure: retry.
+            if e.code == 400 and ("exist" in msg.lower() or "already" in msg.lower()):
                 print("admin already exists, ok", flush=True)
                 break
             print("register retry:", e.code, msg, flush=True)
