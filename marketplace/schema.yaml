@@ -44,8 +44,9 @@ x-google-marketplace:
             verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
           # pods + pods/log are required so the deployer SA can apply and watch
           # the apptest tester Pod during `mpdev verify`.
+          # serviceaccounts: the deployer's post-test cleanup deletes its own SA by label.
           - apiGroups: [""]
-            resources: ["services", "secrets", "configmaps", "pods", "persistentvolumeclaims"]
+            resources: ["services", "secrets", "configmaps", "serviceaccounts", "pods", "persistentvolumeclaims"]
             verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
           - apiGroups: [""]
             resources: ["pods/log"]
@@ -97,6 +98,11 @@ properties:
   googleApiKey:
     type: string
     title: Google API key for the chat agent (optional; chat is disabled without it)
+
+  ingress.enabled:
+    type: boolean
+    default: true
+    title: Create a GKE Ingress with a managed TLS certificate (uncheck to use your own)
 
   apiKey:
     type: string

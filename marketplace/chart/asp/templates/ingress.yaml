@@ -2,6 +2,11 @@
 # managed certificate; HTTP stays enabled and is redirected to HTTPS by the
 # FrontendConfig. GKE forbids allow-http:false together with managed-certificates,
 # and the HTTPS redirect itself requires HTTP to remain enabled.
+#
+# Gated on ingress.enabled so a customer fronting ASP with their own ingress/LB can
+# turn it off. It is also disabled in verification mode: with no real DNS the managed
+# certificate never provisions, so the Ingress never reports ready.
+{{- if .Values.ingress.enabled }}
 apiVersion: networking.gke.io/v1
 kind: ManagedCertificate
 metadata:
@@ -28,7 +33,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ .Release.Name }}
-  namespace: {{ .Release.Namespace }}
   annotations:
     networking.gke.io/managed-certificates: {{ .Release.Name }}-cert
     networking.gke.io/v1beta1.FrontendConfig: {{ .Release.Name | quote }}
@@ -54,3 +58,4 @@ spec:
                 name: {{ .Release.Name }}-frontend
                 port:
                   number: 80
+{{- end }}
