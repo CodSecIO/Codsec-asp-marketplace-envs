@@ -6,7 +6,17 @@
 # build context's chart/ must hold EXACTLY ONE chart subdirectory (Chart.yaml at
 # chart/asp/Chart.yaml), with schema.yaml alongside chart/ - the Makefile builds
 # with the marketplace/ directory as the context.
-#
-# NOTE: the produced image must still pass `mpdev verify` on a test GKE cluster
-# before submission (see README open items).
 FROM gcr.io/cloud-marketplace-tools/k8s/deployer_helm/onbuild
+
+# The onbuild base only populates /data. `mpdev verify` reads /data-test: a test
+# chart (the tester Pod, annotated marketplace.cloud.google.com/verification:test,
+# run after install) and a schema overlay that supplies headless defaults for the
+# required inputs (domain, adminEmail) so verification can run non-interactively.
+# Tarred the same way the base packages /data/chart (chart/ at the tar root).
+COPY apptest/deployer/asp /tmp/test/chart
+RUN cd /tmp/test \
+    && tar -czf chart.tar.gz chart \
+    && mkdir -p /data-test/chart \
+    && mv chart.tar.gz /data-test/chart/ \
+    && rm -rf /tmp/test
+COPY apptest/deployer/schema.yaml /data-test/schema.yaml
