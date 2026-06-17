@@ -22,6 +22,6 @@ RUN cd /tmp/test \
 COPY apptest/deployer/schema.yaml /data-test/schema.yaml
 
 # `mpdev verify` waits up to WAIT_FOR_READY_TIMEOUT (default 300s) for the app to
-# become ready. ASP's cold start (image pulls + ~57 DB migrations + first-user
+# become ready. ASP's cold start (image pulls + DB migrations + first-user
 # bootstrap) needs longer. Verify-only: the normal install (deploy.sh) does not wait.
 ENV WAIT_FOR_READY_TIMEOUT=900
