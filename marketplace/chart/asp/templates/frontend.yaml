@@ -27,15 +27,19 @@ spec:
           env:
             - name: SERVER_HOST
               value: "https://{{ .Values.domain }}"
+          # The Next.js SSR home page can take a few seconds to render on a cold
+          # start, so the probe is given a generous timeout and failure budget.
           readinessProbe:
             httpGet:
               path: /
               port: 3000
-            initialDelaySeconds: 5
-            periodSeconds: 5
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
           resources:
             requests:
-              cpu: 100m
+              cpu: 250m
               memory: 256Mi
             limits:
               memory: 512Mi
