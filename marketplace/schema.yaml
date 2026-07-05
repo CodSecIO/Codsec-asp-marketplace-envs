@@ -147,8 +147,8 @@ properties:
 
   ingress.enabled:
     type: boolean
-    default: true
-    title: Create a GKE Ingress with a managed TLS certificate (uncheck to use your own)
+    default: false
+    title: Create a bundled GKE Ingress with a managed TLS certificate (off by default - leave off to expose ASP with your own ingress/LB; enabling it adds a 15-60 min cert wait and needs DNS pointed at the load balancer)
 
   apiKey:
     type: string

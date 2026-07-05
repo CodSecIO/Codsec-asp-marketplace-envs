@@ -12,9 +12,13 @@ domain: asp.example.com
 # Initial admin account, created automatically after install by the bootstrap Job.
 adminEmail: ""
 
-# Create the GKE Ingress + managed TLS certificate. Disable to front ASP with your own ingress/LB.
+# Bundled GKE Ingress + managed TLS certificate. OFF by default (private-by-default,
+# matching the Cloud Marketplace click-to-deploy convention): ASP is a ClusterIP
+# Service reached via `kubectl port-forward` or your own ingress/LB. Set true to opt
+# into the bundled external Ingress - that adds a 15-60 min managed-cert wait and
+# requires pointing the domain's DNS at the load balancer IP after install.
 ingress:
-  enabled: true
+  enabled: false
 
 frontend:
   image:
