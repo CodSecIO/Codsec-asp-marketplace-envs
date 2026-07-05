@@ -66,6 +66,10 @@ kubectl -n asp port-forward svc/asp-frontend 8080:80
 # open http://localhost:8080
 ```
 
+> The frontend's browser calls the backend at the `domain` you set (`https://<domain>/api`),
+> so a port-forward shows the UI but **login only works once `domain` resolves to ASP** -
+> via your own ingress/load balancer or the bundled ingress.
+
 For real use, front `asp-frontend` (port 80, path `/`) and `asp-backend` (port 80, path
 `/api`) with your own ingress/load balancer and TLS, on the hostname you passed as `domain`.
 
