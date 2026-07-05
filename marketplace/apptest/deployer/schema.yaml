@@ -15,9 +15,10 @@ properties:
   ingress.enabled:
     type: boolean
     default: false
-  # Point the BYO connection inputs at the ephemeral verify-db / verify-redis
-  # fixtures (apptest/deployer/asp/templates). db.user/db.name/db.port use their
-  # main-schema defaults (asp/asp/5432), which match the fixture's credentials.
+  # Point the BYO Postgres inputs at the ephemeral verify-db fixture
+  # (apptest/deployer/asp/templates). db.user/db.name/db.port use their main-schema
+  # defaults (asp/asp/5432), which match the fixture's credentials. Redis is bundled
+  # by the main chart, so verification exercises the real bundled Redis 8.
   db.host:
     type: string
     default: asp-verify-db
@@ -29,6 +30,3 @@ properties:
     # whole property, so the default rides alongside the same MASKED_FIELD type).
     x-google-marketplace:
       type: MASKED_FIELD
-  redis.host:
-    type: string
-    default: asp-verify-redis

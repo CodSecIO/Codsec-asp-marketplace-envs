@@ -16,27 +16,24 @@ bundled ingress (`ingress.enabled=true`), the chart uses GKE Ingress (`gce`), a
 `ManagedCertificate`, and a `FrontendConfig` for HTTPS; these are available on GKE by
 default.
 
-## Data services (bring your own)
+## Data services
 
-ASP does not run a database or cache in-cluster. Provision and have ready, reachable from
-the cluster:
-
-- **PostgreSQL 16** - host, port (5432), database name, user, and password. The backend
-  connects without TLS, so the database must accept non-TLS connections (for example Cloud
-  SQL over private IP). The named user needs permission to create the schema (the install
-  runs `alembic upgrade head` against an empty database).
-- **Redis** - host and port (6379); a password and TLS are optional. For **persistent,
-  multi-replica agent state**, Redis must provide the **RedisJSON + RediSearch** modules
-  (Redis Stack, Redis Enterprise / Redis Cloud, or self-managed Redis with the modules).
-  A plain managed Redis without them (for example Cloud Memorystore) still works - the app
-  detects the missing modules and falls back to an in-memory checkpointer - but agent
-  conversation state is then ephemeral and per-pod (lost on restart, not shared across the
-  backend replicas).
+- **PostgreSQL 16 (bring your own)** - host, port (5432), database name, user, and
+  password, reachable from the cluster. The backend connects without TLS, so the database
+  must accept non-TLS connections (for example Cloud SQL over private IP). The named user
+  needs permission to create the schema (the install runs `alembic upgrade head` against
+  an empty database).
+- **Redis (bundled - nothing to provision)** - ASP runs Redis 8 in-cluster, because the
+  agent requires the RedisJSON + RediSearch modules, which Redis 8 ships in core and no
+  managed external Redis (Memorystore, ElastiCache) provides. It is backed by a
+  PersistentVolumeClaim (default 50Gi), so the cluster needs a default StorageClass and
+  enough disk quota.
 
 ## Cluster capacity
 
-The release runs the frontend (2 replicas) and the backend (2 replicas). A small default
-node pool is enough for an evaluation.
+The release runs the frontend (2 replicas), the backend (2 replicas), and the bundled
+Redis (1 replica, sized for large tenants: up to 8Gi memory + a 50Gi PVC by default). Tune
+`redis.resources` / `redis.persistence.size` down for a small evaluation.
 
 ## DNS
 

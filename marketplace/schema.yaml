@@ -6,11 +6,12 @@ x-google-marketplace:
   publishedVersion: "1.2.0"
   publishedVersionMetadata:
     releaseNote: >-
-      CodSec ASP: chat UI and backend API, with bring-your-own managed PostgreSQL 16
-      and Redis. The public ingress is now opt-in - ASP is a ClusterIP Service by
+      CodSec ASP: chat UI and backend API. Bring your own managed PostgreSQL 16;
+      Redis 8 (RedisJSON + RediSearch, required by the agent) is now bundled
+      in-cluster. The public ingress is opt-in - ASP is a ClusterIP Service by
       default; enable the bundled GKE Ingress + managed certificate with
-      ingress.enabled. Also fixes the bundled ingress (correct GKE ingress-class
-      annotation and frontend health-check path).
+      ingress.enabled. Fixes the bundled ingress (GKE ingress-class annotation and
+      frontend health-check path).
 
   images:
     # Main image: backend (secops-agent). Empty key is the primary image.
@@ -26,14 +27,21 @@ x-google-marketplace:
           type: REPO_WITH_REGISTRY
         frontend.image.tag:
           type: TAG
+    # Bundled in-cluster Redis 8 - republished + CVE-scanned like any deployed image.
+    redis:
+      properties:
+        redis.image.repo:
+          type: REPO_WITH_REGISTRY
+        redis.image.tag:
+          type: TAG
 
   # Namespaced Role scoped to exactly what the deployer creates.
   deployerServiceAccount:
     description: >-
       Creates and manages the ASP application resources in the install namespace:
-      Deployments, Services, Secrets, a ConfigMap, the schema-migration and
-      bootstrap Jobs, an Ingress with a GKE ManagedCertificate and FrontendConfig,
-      and the Application custom resource.
+      Deployments, Services, Secrets, ConfigMaps, a PersistentVolumeClaim for the
+      bundled Redis, the schema-migration and bootstrap Jobs, an optional Ingress
+      with a GKE ManagedCertificate and FrontendConfig, and the Application resource.
     roles:
       - type: Role
         rulesType: CUSTOM
@@ -48,7 +56,7 @@ x-google-marketplace:
           # the apptest tester Pod during `mpdev verify`.
           # serviceaccounts: the deployer's post-test cleanup deletes its own SA by label.
           - apiGroups: [""]
-            resources: ["services", "secrets", "configmaps", "serviceaccounts", "pods"]
+            resources: ["services", "secrets", "configmaps", "serviceaccounts", "pods", "persistentvolumeclaims"]
             verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
           - apiGroups: [""]
             resources: ["pods/log"]
@@ -81,10 +89,9 @@ properties:
     type: string
     title: Public domain for the chat UI (e.g. asp.example.com)
 
-  # Bring-your-own data services. ASP connects to a managed PostgreSQL 16 and a
-  # Redis that you provision and reach from the cluster - the package does not run
-  # them in-cluster. The backend connects to Postgres without TLS, so the database
-  # must accept non-TLS connections (e.g. Cloud SQL over private IP).
+  # Bring-your-own PostgreSQL 16 (Redis is bundled in-cluster). ASP connects to a
+  # managed Postgres you provision and reach from the cluster; it connects without
+  # TLS, so the database must accept non-TLS connections (e.g. Cloud SQL private IP).
   db.host:
     type: string
     title: PostgreSQL host (hostname or IP reachable from the cluster)
@@ -107,25 +114,6 @@ properties:
     title: PostgreSQL password
     x-google-marketplace:
       type: MASKED_FIELD
-
-  redis.host:
-    type: string
-    title: Redis host (hostname or IP reachable from the cluster)
-  redis.port:
-    type: integer
-    title: Redis port
-    default: 6379
-    minimum: 1
-    maximum: 65535
-  redis.password:
-    type: string
-    title: Redis password (optional; leave blank if Redis has no auth)
-    x-google-marketplace:
-      type: MASKED_FIELD
-  redis.tls:
-    type: boolean
-    title: Connect to Redis over TLS
-    default: false
 
   adminEmail:
     type: string
@@ -180,5 +168,4 @@ required:
   - domain
   - db.host
   - db.password
-  - redis.host
   - adminEmail

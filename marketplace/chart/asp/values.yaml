@@ -45,12 +45,28 @@ db:
   name: asp
   password: ""
 
-# Bring-your-own Redis. password/tls are optional (Memorystore Basic has neither).
+# Bundled in-cluster Redis 8 (ships RedisJSON + RediSearch, which the backend
+# requires). Not bring-your-own - no managed external Redis provides those modules.
+# Sized for large tenants; tune resources / persistence.size for your load.
 redis:
-  host: ""
-  port: 6379
-  password: ""
-  tls: false
+  image:
+    # Additional image, republished + CVE-scanned by Marketplace (declared in schema).
+    repo: us-docker.pkg.dev/codsec-public/asp-deployer/asp/redis
+    tag: "1.2.0"
+  # Cap memory below the container limit so Redis never OOMKills; volatile-lru evicts
+  # only expiring (TTL'd) checkpoint keys under pressure, never index metadata.
+  maxmemory: "6gb"
+  maxmemoryPolicy: volatile-lru
+  persistence:
+    size: 50Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      cpu: "2"
+      memory: 8Gi
 
 # Generated at deploy time by Marketplace (schema GENERATED_PASSWORD); set here
 # only so the chart renders standalone.

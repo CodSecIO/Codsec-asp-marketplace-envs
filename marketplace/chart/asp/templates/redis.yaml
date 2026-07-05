@@ -1,0 +1,112 @@
+# Bundled in-cluster Redis 8. Redis 8 ships RedisJSON + RediSearch in core Redis,
+# which the backend REQUIRES - agent checkpointing stores JSON documents and builds
+# an FT search index. No managed external Redis (Memorystore, ElastiCache) provides
+# those modules, so Redis is bundled here rather than bring-your-own; without the
+# modules the app silently falls back to an in-memory, per-pod, non-persistent store.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-redis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "redis") | nindent 4 }}
+data:
+  redis.conf: |
+    protected-mode no
+    dir /data
+    appendonly yes
+    loadmodule /usr/local/lib/redis/modules/rejson.so
+    loadmodule /usr/local/lib/redis/modules/redisearch.so
+    maxmemory {{ .Values.redis.maxmemory }}
+    maxmemory-policy {{ .Values.redis.maxmemoryPolicy }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-redis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "redis") | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ .Values.redis.persistence.size }}
+  {{- with .Values.redis.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-redis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "redis") | nindent 4 }}
+spec:
+  replicas: 1
+  # ReadWriteOnce PVC: the old pod must release the disk before the new one attaches.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "asp.componentLabels" (dict "Release" .Release "component" "redis") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "asp.componentLabels" (dict "Release" .Release "component" "redis") | nindent 8 }}
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis
+          image: "{{ .Values.redis.image.repo }}:{{ .Values.redis.image.tag }}"
+          # args (not command) keeps the official image's entrypoint, which chowns
+          # /data and drops to the redis user. Do NOT drop capabilities here - the
+          # entrypoint needs CHOWN/SETUID/SETGID for that (unlike the app containers).
+          args: ["redis-server", "/etc/redis/redis.conf"]
+          ports:
+            - name: redis
+              containerPort: 6379
+          # Modules + AOF replay can be slow to load on a large dataset, so gate
+          # readiness behind a generous startup probe before the steady-state check.
+          startupProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/redis
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Release.Name }}-redis
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-redis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "redis") | nindent 4 }}
+spec:
+  selector:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "redis") | nindent 4 }}
+  ports:
+    - port: 6379
+      targetPort: 6379
