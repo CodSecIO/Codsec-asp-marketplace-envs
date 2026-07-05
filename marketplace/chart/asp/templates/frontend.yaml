@@ -34,11 +34,14 @@ spec:
           env:
             - name: SERVER_HOST
               value: "https://{{ .Values.domain }}"
-          # The Next.js SSR home page can take a few seconds to render on a cold
-          # start, so the probe is given a generous timeout and failure budget.
+          # Probe /chat, not /: Next.js 308-redirects / -> /chat, and the GKE
+          # ingress (GCLB) health check only treats 2xx as healthy. kubelet accepts
+          # 3xx so / would pass this probe, but the load balancer would still mark
+          # the pod UNHEALTHY and serve 502. /chat returns 200. Timeout/failures are
+          # generous because Next.js SSR can be slow on a cold start.
           readinessProbe:
             httpGet:
-              path: /
+              path: /chat
               port: 3000
             initialDelaySeconds: 15
             periodSeconds: 10

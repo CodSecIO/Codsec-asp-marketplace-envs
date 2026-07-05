@@ -52,32 +52,44 @@ helm install asp marketplace/chart/asp \
 > pull them: Marketplace handles this automatically, and for a direct install you can
 > request access from CodSec or override `backend.image.repo` / `frontend.image.repo`.
 
-> To front ASP with your own ingress or load balancer, add `--set ingress.enabled=false`
-> and skip steps 3-4 (DNS + managed certificate).
+> **By default ASP has no public ingress** - it is a ClusterIP Service, so you front it
+> with your own ingress/load balancer (step 3) or port-forward for a quick look. To use
+> the bundled GKE Ingress + managed TLS certificate instead, add `--set ingress.enabled=true`
+> and follow step 4.
 
-## 3. Point DNS at the load balancer
+## 3. Access ASP (default: ClusterIP)
+
+For a quick look, port-forward the frontend:
+
+```bash
+kubectl -n asp port-forward svc/asp-frontend 8080:80
+# open http://localhost:8080
+```
+
+> The frontend's browser calls the backend at the `domain` you set (`https://<domain>/api`),
+> so a port-forward shows the UI but **login only works once `domain` resolves to ASP** -
+> via your own ingress/load balancer or the bundled ingress.
+
+For real use, front `asp-frontend` (port 80, path `/`) and `asp-backend` (port 80, path
+`/api`) with your own ingress/load balancer and TLS, on the hostname you passed as `domain`.
+
+## 4. Bundled ingress only (`--set ingress.enabled=true`)
+
+Point DNS at the load balancer, then wait for the managed certificate (first provisioning
+can take up to an hour):
 
 ```bash
 kubectl -n asp get ingress asp -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-```
-
-Create an A record for your domain pointing at that IP.
-
-## 4. Wait for the certificate
-
-The GKE managed certificate is issued once your domain resolves to the load balancer;
-first provisioning can take up to an hour.
-
-```bash
+# create an A record for your domain -> that IP
 kubectl -n asp get managedcertificate asp-cert -o jsonpath='{.status.certificateStatus}'
 ```
 
 ## 5. Log in
 
-Open `https://asp.example.com` and sign in with the `adminEmail` / `adminPassword` you
-set at install. To check the backend directly:
+Sign in through your access URL (the port-forward, your own ingress, or `https://<domain>`
+if you enabled the bundled ingress) with the `adminEmail` / `adminPassword` you set at
+install.
 
 ```bash
 kubectl -n asp get pods
-curl https://asp.example.com/api/health
 ```

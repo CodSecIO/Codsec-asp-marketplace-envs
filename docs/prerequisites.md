@@ -11,8 +11,10 @@
 - A GKE cluster (Standard or Autopilot) you can deploy into
 - Permission to create a namespace and workloads in that cluster
 
-The chart uses GKE Ingress (`gce`), a `ManagedCertificate`, and a `FrontendConfig` for
-HTTPS; these are available on GKE by default.
+By default ASP is exposed as a ClusterIP Service (no public ingress). If you opt into the
+bundled ingress (`ingress.enabled=true`), the chart uses GKE Ingress (`gce`), a
+`ManagedCertificate`, and a `FrontendConfig` for HTTPS; these are available on GKE by
+default.
 
 ## Data services (bring your own)
 
@@ -23,7 +25,13 @@ the cluster:
   connects without TLS, so the database must accept non-TLS connections (for example Cloud
   SQL over private IP). The named user needs permission to create the schema (the install
   runs `alembic upgrade head` against an empty database).
-- **Redis** - host and port (6379). A password and TLS are optional.
+- **Redis** - host and port (6379); a password and TLS are optional. For **persistent,
+  multi-replica agent state**, Redis must provide the **RedisJSON + RediSearch** modules
+  (Redis Stack, Redis Enterprise / Redis Cloud, or self-managed Redis with the modules).
+  A plain managed Redis without them (for example Cloud Memorystore) still works - the app
+  detects the missing modules and falls back to an in-memory checkpointer - but agent
+  conversation state is then ephemeral and per-pod (lost on restart, not shared across the
+  backend replicas).
 
 ## Cluster capacity
 
@@ -32,8 +40,9 @@ node pool is enough for an evaluation.
 
 ## DNS
 
-A domain you control, with the ability to add an A record pointing at the Ingress load
-balancer IP created during install.
+Only for the bundled ingress (`ingress.enabled=true`): a domain you control, with the
+ability to add an A record pointing at the ingress load balancer IP created during install.
+With your own ingress/LB you manage DNS and TLS yourself.
 
 ## Container images
 

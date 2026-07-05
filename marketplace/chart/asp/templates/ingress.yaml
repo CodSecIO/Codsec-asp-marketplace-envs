@@ -34,12 +34,16 @@ kind: Ingress
 metadata:
   name: {{ .Release.Name }}
   annotations:
+    # GKE's ingress controller selects the class from this annotation, NOT from
+    # spec.ingressClassName (which it ignores - you only get a deprecation warning).
+    # With ingressClassName: gce and no `gce` IngressClass on the cluster, standard
+    # Kubernetes leaves the Ingress unclaimed, so no load balancer is ever created.
+    kubernetes.io/ingress.class: "gce"
     networking.gke.io/managed-certificates: {{ .Release.Name }}-cert
     networking.gke.io/v1beta1.FrontendConfig: {{ .Release.Name | quote }}
   labels:
     {{- include "asp.labels" . | nindent 4 }}
 spec:
-  ingressClassName: gce
   rules:
     - host: {{ .Values.domain }}
       http:
