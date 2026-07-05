@@ -16,11 +16,12 @@ gcloud container clusters get-credentials CLUSTER_NAME \
 
 ## 2. Install
 
-The chart deploys the frontend and backend, connects them to the PostgreSQL and Redis you
-provide, runs the database migrations, and creates your first admin user automatically.
+The chart deploys the frontend and backend, bundles Redis 8 in-cluster, connects to the
+PostgreSQL you provide, runs the database migrations, and creates your first admin user
+automatically.
 
 Set your domain, admin email, and the connection details for your PostgreSQL 16 database
-and Redis (see [prerequisites](prerequisites.md)). The admin password is the login you'll
+(see [prerequisites](prerequisites.md)). The admin password is the login you'll
 use - it must be at least 12 characters with an upper case letter, a lower case letter, a
 digit, and a symbol. The JWT secret and admin API key can be generated on the spot. A
 Google API key is optional: without it the app installs and you can log in, but the chat
@@ -39,14 +40,13 @@ helm install asp marketplace/chart/asp \
   --set db.host=YOUR_PG_HOST --set db.port=5432 \
   --set db.user=asp --set db.name=asp \
   --set db.password='YOUR_PG_PASSWORD' \
-  --set redis.host=YOUR_REDIS_HOST --set redis.port=6379 \
   --set jwtSecret="$(openssl rand -hex 24)" \
   --set apiKey="$(openssl rand -hex 24)"
 ```
 
-> Redis with a password or TLS: add `--set redis.password='...'` and/or
-> `--set redis.tls=true`. The backend connects to PostgreSQL without TLS, so the database
-> must accept non-TLS connections.
+> Redis 8 is bundled in-cluster (it ships the RedisJSON + RediSearch modules the agent
+> needs), so there is nothing to provide. The backend connects to PostgreSQL without TLS,
+> so the database must accept non-TLS connections.
 
 > The default images live in a private Artifact Registry. Make sure your GKE nodes can
 > pull them: Marketplace handles this automatically, and for a direct install you can

@@ -1,0 +1,123 @@
+# Bundled in-cluster Redis 8. Redis 8 ships RedisJSON + RediSearch in core Redis,
+# which the backend REQUIRES - agent checkpointing stores JSON documents and builds
+# an FT search index. No managed external Redis (Memorystore, ElastiCache) provides
+# those modules, so Redis is bundled rather than bring-your-own; without them the app
+# silently falls back to an in-memory, per-pod, non-persistent store.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-redis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "redis") | nindent 4 }}
+data:
+  redis.conf: |
+    protected-mode no
+    dir /data
+    appendonly yes
+    # Load exactly the two modules the agent uses. redis-server is run directly
+    # (bypassing the image entrypoint), so it loads only these instead of auto-loading
+    # every bundled module - the same way Redis is run in the platform (mcp-envs).
+    loadmodule /usr/local/lib/redis/modules/rejson.so
+    loadmodule /usr/local/lib/redis/modules/redisearch.so
+    maxmemory {{ .Values.redis.maxmemory }}
+    maxmemory-policy {{ .Values.redis.maxmemoryPolicy }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-redis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "redis") | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ .Values.redis.persistence.size }}
+  {{- with .Values.redis.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-redis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "redis") | nindent 4 }}
+spec:
+  replicas: 1
+  # ReadWriteOnce PVC: the old pod must release the disk before the new one attaches.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "asp.componentLabels" (dict "Release" .Release "component" "redis") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "asp.componentLabels" (dict "Release" .Release "component" "redis") | nindent 8 }}
+    spec:
+      securityContext:
+        # Redis runs as the non-root redis user (uid/gid 999); fsGroup makes the mounted
+        # /data PVC group-writable so it can persist its append-only file.
+        runAsUser: 999
+        runAsGroup: 999
+        runAsNonRoot: true
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: redis
+          image: "{{ .Values.redis.image.repo }}:{{ .Values.redis.image.tag }}"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          # Run redis-server directly with our config (not via the image entrypoint).
+          command: ["redis-server", "/etc/redis/redis.conf"]
+          ports:
+            - name: redis
+              containerPort: 6379
+          # Modules + AOF replay can be slow on a large dataset, so gate readiness
+          # behind a generous startup probe before the steady-state check.
+          startupProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/redis
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Release.Name }}-redis
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-redis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "redis") | nindent 4 }}
+spec:
+  selector:
+    {{- include "asp.componentLabels" (dict "Release" .Release "component" "redis") | nindent 4 }}
+  ports:
+    - port: 6379
+      targetPort: 6379

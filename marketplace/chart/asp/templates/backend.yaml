@@ -32,6 +32,16 @@ spec:
           # clear message, so a wrong/unreachable db.host fails visibly instead of
           # hanging Init:0/1 forever.
           command: ["sh", "-c", "n=0; until python -c \"import socket; socket.create_connection(('{{ .Values.db.host }}', {{ .Values.db.port }}), 3)\"; do n=$((n+1)); [ $n -ge 60 ] && { echo \"ERROR: postgres {{ .Values.db.host }}:{{ .Values.db.port }} unreachable after 3m - check db.host/db.port and network reachability\" >&2; exit 1; }; echo \"waiting for db {{ .Values.db.host }}:{{ .Values.db.port }} ($n/60)\"; sleep 3; done"]
+        # Redis holds agent checkpoints. The checkpointer is created on first use and
+        # permanently falls back to an in-memory store if Redis is unreachable then, so
+        # make the bundled Redis reachable before the backend starts serving.
+        - name: wait-redis
+          image: "{{ .Values.backend.image.repo }}:{{ .Values.backend.image.tag }}"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          command: ["sh", "-c", "n=0; until python -c \"import socket; socket.create_connection(('{{ .Release.Name }}-redis', 6379), 3)\"; do n=$((n+1)); [ $n -ge 60 ] && { echo \"ERROR: redis {{ .Release.Name }}-redis:6379 unreachable after 3m\" >&2; exit 1; }; echo \"waiting for redis {{ .Release.Name }}-redis:6379 ($n/60)\"; sleep 3; done"]
       containers:
         - name: backend
           image: "{{ .Values.backend.image.repo }}:{{ .Values.backend.image.tag }}"
@@ -60,24 +70,16 @@ spec:
               value: {{ .Values.db.name | quote }}
             - name: POSTGRES_ECHO
               value: "false"
+            # Bundled in-cluster Redis (no auth, no TLS).
             - name: REDIS_HOST
-              value: {{ .Values.redis.host | quote }}
+              value: {{ .Release.Name }}-redis
             - name: REDIS_PORT
-              value: {{ .Values.redis.port | quote }}
-            - name: REDIS_USE_TLS
-              value: {{ .Values.redis.tls | quote }}
+              value: "6379"
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ .Release.Name }}-backend-env
                   key: POSTGRES_PASSWORD
-            {{- if .Values.redis.password }}
-            - name: REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Release.Name }}-backend-env
-                  key: REDIS_PASSWORD
-            {{- end }}
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
