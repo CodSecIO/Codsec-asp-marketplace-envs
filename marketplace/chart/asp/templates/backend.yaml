@@ -31,7 +31,8 @@ spec:
           # Let the socket error print (no 2>/dev/null) and give up after ~3m with a
           # clear message, so a wrong/unreachable db.host fails visibly instead of
           # hanging Init:0/1 forever.
-          command: ["sh", "-c", "n=0; until python -c \"import socket; socket.create_connection(('{{ .Values.db.host }}', {{ .Values.db.port }}), 3)\"; do n=$((n+1)); [ $n -ge 60 ] && { echo \"ERROR: postgres {{ .Values.db.host }}:{{ .Values.db.port }} unreachable after 3m - check db.host/db.port and network reachability\" >&2; exit 1; }; echo \"waiting for db {{ .Values.db.host }}:{{ .Values.db.port }} ($n/60)\"; sleep 3; done"]
+          # Pure python (no shell): the app image is shell-less (Chainguard).
+          command: ["python", "-c", "import socket,sys,time\nh,p=('{{ .Values.db.host }}',{{ .Values.db.port }})\nfor n in range(1,61):\n try: socket.create_connection((h,p),3); break\n except OSError: print('waiting for postgres %s:%s (%d/60)'%(h,p,n),flush=True); time.sleep(3)\nelse: sys.exit('ERROR: postgres %s:%s unreachable after 3m - check db.host/db.port and network reachability'%(h,p))"]
         # Redis holds agent checkpoints. The checkpointer is created on first use and
         # permanently falls back to an in-memory store if Redis is unreachable then, so
         # make the bundled Redis reachable before the backend starts serving.
@@ -41,7 +42,7 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
-          command: ["sh", "-c", "n=0; until python -c \"import socket; socket.create_connection(('{{ .Release.Name }}-redis', 6379), 3)\"; do n=$((n+1)); [ $n -ge 60 ] && { echo \"ERROR: redis {{ .Release.Name }}-redis:6379 unreachable after 3m\" >&2; exit 1; }; echo \"waiting for redis {{ .Release.Name }}-redis:6379 ($n/60)\"; sleep 3; done"]
+          command: ["python", "-c", "import socket,sys,time\nh,p=('{{ .Release.Name }}-redis',6379)\nfor n in range(1,61):\n try: socket.create_connection((h,p),3); break\n except OSError: print('waiting for redis %s:%s (%d/60)'%(h,p,n),flush=True); time.sleep(3)\nelse: sys.exit('ERROR: redis %s:%s unreachable after 3m'%(h,p))"]
       containers:
         - name: backend
           image: "{{ .Values.backend.image.repo }}:{{ .Values.backend.image.tag }}"
