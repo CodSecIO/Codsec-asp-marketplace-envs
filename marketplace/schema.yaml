@@ -2,13 +2,15 @@ x-google-marketplace:
   schemaVersion: v2
   applicationApiVersion: v1beta1
   # Full semver of this release; rendered into the Application CRD version.
-  # Distinct from the rolling image track tag (e.g. 1.1).
-  publishedVersion: "1.1.0"
+  # Distinct from the rolling image track tag (e.g. 1.2).
+  publishedVersion: "1.2.0"
   publishedVersionMetadata:
     releaseNote: >-
-      CodSec ASP: chat UI and backend API. Bring your own managed PostgreSQL 16
-      and Redis - their connection details are deploy-time inputs (the package no
-      longer bundles in-cluster data services).
+      CodSec ASP: chat UI and backend API, with bring-your-own managed PostgreSQL 16
+      and Redis. The public ingress is now opt-in - ASP is a ClusterIP Service by
+      default; enable the bundled GKE Ingress + managed certificate with
+      ingress.enabled. Also fixes the bundled ingress (correct GKE ingress-class
+      annotation and frontend health-check path).
 
   images:
     # Main image: backend (secops-agent). Empty key is the primary image.

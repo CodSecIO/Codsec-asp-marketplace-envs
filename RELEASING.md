@@ -46,7 +46,7 @@ Tools: docker (with buildx), helm, crane, mpdev.
 3. **Annotate** the deployer with the product service name - a manifest annotation, not a
    Dockerfile LABEL: `make annotate`
    - If you also rebuilt an app image, re-annotate it the same way:
-     `crane mutate <image>:1.1 --annotation com.googleapis.cloudmarketplace.product.service.name=services/asp-codsec.endpoints.codsec-public.cloud.goog`
+     `crane mutate <image>:1.2 --annotation com.googleapis.cloudmarketplace.product.service.name=services/asp-codsec.endpoints.codsec-public.cloud.goog`
 4. **Verify** on a throwaway GKE cluster: `make verify` (installs the deployer, runs the
    apptest tester, uninstalls). The apptest overlay (`apptest/deployer/schema.yaml`)
    supplies headless defaults for `domain` / `adminEmail` and points the `db`/`redis`
@@ -56,7 +56,7 @@ Tools: docker (with buildx), helm, crane, mpdev.
 5. **Producer Portal** (codsec-public):
    - Container images -> Deployer image URL
      `us-docker.pkg.dev/codsec-public/asp-deployer/asp/deployer`.
-   - New Release: Display Tag `1.1`, Version title `1.1.0`. Confirm the **deployer digest**
+   - New Release: Display Tag `1.2`, Version title `1.2.0`. Confirm the **deployer digest**
      matches the one you just pushed ("Change Deployer Image" and re-enter if you rebuilt).
    - Public git repo URL = this repo; Deploy documentation URL = `docs/install.md`.
    - Submit the Container Images review early - it can take two or more weeks.
