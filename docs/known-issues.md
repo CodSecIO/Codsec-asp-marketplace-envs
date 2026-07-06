@@ -1,50 +1,26 @@
 # Known issues
 
-## 1.3 is pinned to v0.11 app images; v0.12 breaks the first-admin bootstrap
+## First admin is SAML SSO only (no local email/password admin)
 
-**Short version.** The bundled `{release}-bootstrap` Job creates the first admin by
-calling `POST /api/auth/local/register` with the admin api-key. That works on **v0.11**
-and earlier, and is broken on **v0.12**. So the 1.3 release ships the **v0.11** backend
-(`secops-agent`) and frontend (`chat-ui`) images. The bundled Redis 8 image is
-independent of the app version.
+ASP runs on the v0.12 app images (CVE-clean, Chainguard base). In v0.12 there is
+**no way to create a local email/password admin**: `/api/auth/local/register` is
+gated to an existing master admin and only ever creates a regular tenant user, and
+no CLI, seed, or "first user becomes admin" path exists. The **only** way to get the
+first `MASTER_TENANT_ADMIN` is a **SAML SSO login**.
 
-**What v0.12 changed.** On v0.11, `/api/auth/local/register` is a public endpoint (it is
-in the auth middleware's `EXCLUDED_PATHS`), and its own guard simply checks the `api-key`
-header against the `API_KEY` env var, with no environment gate. The deployer sets
-`API_KEY`, so the bootstrap Job authenticates and creates the admin.
+So the deployer no longer ships the old api-key bootstrap Job (it could not create an
+admin on v0.12 and made the install hang). The app installs with **zero users**, which
+is healthy, `/api/health` only checks Postgres + Redis, so the Marketplace test
+deployment passes. The first admin is created **after install** by seeding the
+master-tenant SAML config and logging in through the customer's IdP.
 
-v0.12 locked this path down:
+See `docs/install.md` for the first-admin setup steps. The chart generates a
+`BOOTSTRAP_API_KEY` and exposes it on the backend so that call can be made.
 
-- `/api/auth/local/register` was removed from `EXCLUDED_PATHS`, so it now goes through the
-  auth middleware. The middleware only honours the env-var api-key when
-  `MCP_ENVIRONMENT_TYPE` is `local`/`dev`; this chart runs `prod`, so the header is
-  ignored and the request is rejected with 401.
-- The endpoint also gained `@require_user_type(MASTER_TENANT_ADMIN)` and a required
-  `tenant_id`, and `register_user` no longer grants the master-admin type. So even an
-  authenticated caller can't mint the *first* admin this way.
-- v0.12's intended first-admin path is SSO: `POST /api/settings/bootstrap` (gated by
-  `BOOTSTRAP_API_KEY`, refuses once an admin exists) seeds the master-tenant SAML config,
-  and the first person to log in through that SAML flow is provisioned as the admin.
-  There is no local email/password equivalent.
+**Implication for the listing:** ASP on v0.12 requires the customer to have a SAML IdP
+(Okta, Azure AD, Google Workspace, etc.). A simple out-of-the-box email/password login
+would need a local first-admin bootstrap added on the app side (not available in v0.12).
 
-Symptom when run against a v0.12 image: `migrate`, `backend`, `frontend`, and `redis`
-all come up, but the bootstrap Job loops on
-`401 ... Invalid or missing authentication token or api-key` and never completes, so the
-deployer times out and Marketplace validation fails.
-
-**Why `MCP_ENVIRONMENT_TYPE=dev` is not an acceptable workaround.** Dev mode is a real
-security downgrade for a customer install, not just a config flip:
-
-- In dev mode a request authenticated with the env-var api-key is granted **all agent
-  tool calls** with no permission check (`security_wrapper_middleware.py`).
-- Agent tool-output redaction is disabled (`base_agent.py` stops masking TOOL content).
-
-So we do not ship a `dev`-mode install just to unblock the api-key path.
-
-**To move 1.3 (or a later release) onto v0.12, the app side must add** a production-safe
-first-admin bootstrap that mirrors the existing `/api/settings/bootstrap` pattern: a
-public endpoint gated by `BOOTSTRAP_API_KEY` that refuses once an active
-`MASTER_TENANT_ADMIN` exists and otherwise creates a **local** `MASTER_TENANT_ADMIN` from
-an email + password. The deployer already provisions `BOOTSTRAP_API_KEY`, the admin
-email, and the generated admin password, so the chart's bootstrap Job would just repoint
-at it, with no schema change.
+**Not yet automated (follow-up):** the chart does not yet collect the IdP metadata as
+install inputs or generate the SP keypair, so the SAML setup is an operator step today.
+Wiring it into the schema (turnkey SSO) is a possible follow-up.

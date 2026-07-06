@@ -7,11 +7,12 @@ x-google-marketplace:
   publishedVersionMetadata:
     releaseNote: >-
       CodSec ASP: chat UI and backend API. Bring your own managed PostgreSQL 16;
-      Redis 8 (RedisJSON + RediSearch, required by the agent) is now bundled
+      Redis 8 (RedisJSON + RediSearch, required by the agent) is bundled
       in-cluster. The public ingress is opt-in - ASP is a ClusterIP Service by
       default; enable the bundled GKE Ingress + managed certificate with
-      ingress.enabled. Fixes the bundled ingress (GKE ingress-class annotation and
-      frontend health-check path).
+      ingress.enabled. The first admin signs in via SAML SSO: after install, seed
+      the master-tenant SAML config through POST /api/settings/bootstrap using the
+      generated bootstrapApiKey, then log in through your IdP (see docs/install.md).
 
   images:
     # Main image: backend (secops-agent). Empty key is the primary image.
@@ -40,8 +41,8 @@ x-google-marketplace:
     description: >-
       Creates and manages the ASP application resources in the install namespace:
       Deployments, Services, Secrets, ConfigMaps, a PersistentVolumeClaim for the
-      bundled Redis, the schema-migration and bootstrap Jobs, an optional Ingress
-      with a GKE ManagedCertificate and FrontendConfig, and the Application resource.
+      bundled Redis, the schema-migration Job, an optional Ingress with a GKE
+      ManagedCertificate and FrontendConfig, and the Application resource.
     roles:
       - type: Role
         rulesType: CUSTOM
@@ -115,20 +116,17 @@ properties:
     x-google-marketplace:
       type: MASKED_FIELD
 
-  adminEmail:
+  # v0.12 has no local email/password admin - the first MASTER_TENANT_ADMIN is
+  # provisioned by the first SAML SSO login. This key gates the one-time call that
+  # seeds the master-tenant SAML config (POST /api/settings/bootstrap).
+  bootstrapApiKey:
     type: string
-    title: Initial admin email (used to log in after install)
-
-  adminPassword:
-    type: string
-    title: Initial admin password (generated if left blank)
+    title: First-admin bootstrap key (generated; gates the one-time SAML setup call)
     x-google-marketplace:
       type: GENERATED_PASSWORD
       generatedPassword:
-        # Symbols included so it satisfies the backend password policy
-        # (>=12 chars, upper + lower + digit + special).
-        length: 16
-        includeSymbols: true
+        length: 32
+        includeSymbols: false
         base64: false
 
   googleApiKey:
@@ -142,7 +140,7 @@ properties:
 
   apiKey:
     type: string
-    title: Backend admin API key (generated; used to bootstrap the first user)
+    title: Backend admin API key (generated; legacy, honoured only in dev)
     x-google-marketplace:
       type: GENERATED_PASSWORD
       generatedPassword:
@@ -168,4 +166,3 @@ required:
   - domain
   - db.host
   - db.password
-  - adminEmail

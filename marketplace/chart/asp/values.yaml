@@ -9,9 +9,6 @@ publishedVersion: "1.3.0"
 # Public domain for the chat UI; the backend is served at /api on the same host.
 domain: asp.example.com
 
-# Initial admin account, created automatically after install by the bootstrap Job.
-adminEmail: ""
-
 # Bundled GKE Ingress + managed TLS certificate. OFF by default (private-by-default,
 # matching the Cloud Marketplace click-to-deploy convention): ASP is a ClusterIP
 # Service reached via `kubectl port-forward` or your own ingress/LB. Set true to opt
@@ -72,7 +69,8 @@ redis:
 # only so the chart renders standalone.
 jwtSecret: ""
 apiKey: ""
-adminPassword: ""
+# Gates the one-time SAML-config bootstrap that provisions the first admin (SSO).
+bootstrapApiKey: ""
 
 # Optional LLM provider key so the chat agent works (default provider is Google
 # GenAI). Without it the app installs and you can log in, but sending a chat fails.
