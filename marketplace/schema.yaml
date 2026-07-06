@@ -2,8 +2,8 @@ x-google-marketplace:
   schemaVersion: v2
   applicationApiVersion: v1beta1
   # Full semver of this release; rendered into the Application CRD version.
-  # Distinct from the rolling image track tag (e.g. 1.3).
-  publishedVersion: "1.3.0"
+  # Distinct from the rolling image track tag (e.g. 1.4).
+  publishedVersion: "1.4.0"
   publishedVersionMetadata:
     releaseNote: >-
       CodSec ASP: chat UI and backend API. Bring your own managed PostgreSQL 16;
