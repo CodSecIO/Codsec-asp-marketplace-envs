@@ -17,9 +17,9 @@ ANNOTATION := com.googleapis.cloudmarketplace.product.service.name=$(SERVICE)
 lint:
 	helm lint chart/asp
 	helm template asp chart/asp \
-	  --set domain=example.com --set adminEmail=admin@example.com \
-	  --set db.host=db --set db.password=x --set redis.host=r \
-	  --set jwtSecret=x --set apiKey=x --set 'adminPassword=Abc12345!def' \
+	  --set domain=example.com \
+	  --set db.host=db --set db.password=x \
+	  --set jwtSecret=x --set apiKey=x --set bootstrapApiKey=b \
 	  >/dev/null && echo "template OK"
 
 # Build and push the deployer image. The onbuild base bakes a SNAPSHOT of chart/ +
@@ -41,6 +41,6 @@ annotate:
 	crane tag $(DEPLOYER):$(TRACK) $(VERSION)
 
 # Install + verify against the current kube context (a throwaway GKE cluster). The
-# apptest overlay supplies headless defaults for the required domain/adminEmail.
+# apptest overlay supplies headless defaults for the required domain + db inputs.
 verify:
 	mpdev verify --deployer=$(DEPLOYER):$(TRACK)

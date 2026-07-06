@@ -1,8 +1,8 @@
 # Install
 
 The recommended path is the **Google Cloud Marketplace** listing: deploy from the ASP
-product page, choose your cluster and namespace, set the domain and admin email, and
-Marketplace mirrors the images into your project and runs the deployer.
+product page, choose your cluster and namespace, set the domain, and Marketplace mirrors
+the images into your project and runs the deployer.
 
 These steps cover the **command-line** alternative, installing the same Helm chart
 directly into an existing GKE cluster.
@@ -17,15 +17,13 @@ gcloud container clusters get-credentials CLUSTER_NAME \
 ## 2. Install
 
 The chart deploys the frontend and backend, bundles Redis 8 in-cluster, connects to the
-PostgreSQL you provide, runs the database migrations, and creates your first admin user
-automatically.
+PostgreSQL you provide, and runs the database migrations. It does **not** create an admin
+user - the first admin signs in via SAML SSO (see step 5).
 
-Set your domain, admin email, and the connection details for your PostgreSQL 16 database
-(see [prerequisites](prerequisites.md)). The admin password is the login you'll
-use - it must be at least 12 characters with an upper case letter, a lower case letter, a
-digit, and a symbol. The JWT secret and admin API key can be generated on the spot. A
-Google API key is optional: without it the app installs and you can log in, but the chat
-agent won't respond.
+Set your domain and the connection details for your PostgreSQL 16 database
+(see [prerequisites](prerequisites.md)). The JWT secret and bootstrap key can be generated
+on the spot. A Google API key is optional: without it the app installs and you can log in,
+but the chat agent won't respond.
 
 ```bash
 git clone https://github.com/CodSecIO/Codsec-asp-marketplace-envs
@@ -34,14 +32,13 @@ cd Codsec-asp-marketplace-envs
 helm install asp marketplace/chart/asp \
   --namespace asp --create-namespace \
   --set domain=asp.example.com \
-  --set adminEmail=admin@yourcompany.com \
-  --set adminPassword='ChooseAStr0ng!Password' \
   --set googleApiKey=YOUR_GOOGLE_API_KEY \
   --set db.host=YOUR_PG_HOST --set db.port=5432 \
   --set db.user=asp --set db.name=asp \
   --set db.password='YOUR_PG_PASSWORD' \
   --set jwtSecret="$(openssl rand -hex 24)" \
-  --set apiKey="$(openssl rand -hex 24)"
+  --set apiKey="$(openssl rand -hex 24)" \
+  --set bootstrapApiKey="$(openssl rand -hex 24)"
 ```
 
 > Redis 8 is bundled in-cluster (it ships the RedisJSON + RediSearch modules the agent
@@ -84,11 +81,32 @@ kubectl -n asp get ingress asp -o jsonpath='{.status.loadBalancer.ingress[0].ip}
 kubectl -n asp get managedcertificate asp-cert -o jsonpath='{.status.certificateStatus}'
 ```
 
-## 5. Log in
+## 5. First admin (SAML SSO)
 
-Sign in through your access URL (the port-forward, your own ingress, or `https://<domain>`
-if you enabled the bundled ingress) with the `adminEmail` / `adminPassword` you set at
-install.
+ASP has no local email/password admin - the first `MASTER_TENANT_ADMIN` is created by the
+first SAML SSO login. Once the app is up, seed the master-tenant SAML config once, using
+the `bootstrapApiKey` you set (the backend exposes it as `BOOTSTRAP_API_KEY`):
+
+```bash
+BKEY=<the bootstrapApiKey you set>
+curl -X POST "https://<domain>/api/settings/bootstrap" \
+  -H "Authorization: $BKEY" -H "Content-Type: application/json" \
+  -d '{
+    "idp_entity_id": "<your IdP entity ID>",
+    "idp_sso_url":   "<your IdP SSO URL>",
+    "idp_slo_url":   "<your IdP logout URL>",
+    "idp_x509_cert": "<your IdP signing certificate>",
+    "sp_entity_id":  "<the SP entity ID for the master-tenant app>"
+  }'
+```
+
+Then open `https://<domain>` and sign in through your IdP - the first master-tenant login
+is provisioned as the admin. The endpoint refuses once an admin already exists.
+
+> For SSO to complete, the backend's SAML SP settings must be configured for your IdP:
+> `SAML_SP_URL`, `SAML_SP_X509CERT`, `SAML_SP_PRIVATEKEY`, `FRONTEND_URL`, and
+> `ALLOWED_REDIRECT_ORIGINS`. Set them on the `asp-backend` deployment. Turnkey SAML
+> wiring in the chart is a planned follow-up.
 
 ```bash
 kubectl -n asp get pods

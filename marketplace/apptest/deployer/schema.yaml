@@ -1,15 +1,12 @@
 # Verification overlay for `mpdev verify`. Supplies defaults for the required app
 # properties that have no default in the main schema.yaml, so the app can be
 # installed headlessly during verification. Production installs still require the
-# user to enter these. GENERATED_PASSWORD properties (adminPassword/apiKey/
+# user to enter these. GENERATED_PASSWORD properties (bootstrapApiKey/apiKey/
 # jwtSecret) are auto-filled by the verifier, so they need no default.
 properties:
   domain:
     type: string
     default: asp.example.com
-  adminEmail:
-    type: string
-    default: admin@example.com
   # No real DNS in verification, so the managed cert never provisions and the
   # Ingress never reports ready - skip it so wait_for_ready can converge.
   ingress.enabled:

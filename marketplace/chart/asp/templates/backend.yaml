@@ -54,8 +54,8 @@ spec:
             - name: http
               containerPort: 8000
           # The app reads discrete env (NOT a DATABASE_URL/REDIS_URL). Secrets come
-          # from explicit keyRefs so ADMIN_PASSWORD (only the bootstrap Job needs it)
-          # is never pulled into the backend's environment.
+          # from explicit keyRefs (not envFrom) so only the keys the backend needs
+          # are pulled into its environment.
           env:
             - name: API_PORT
               value: "8000"
@@ -91,6 +91,13 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-backend-env
                   key: API_KEY
+            # Enables the one-time SAML-config bootstrap (POST /api/settings/bootstrap)
+            # used to provision the first admin via SSO.
+            - name: BOOTSTRAP_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-backend-env
+                  key: BOOTSTRAP_API_KEY
             {{- if .Values.googleApiKey }}
             - name: GOOGLE_API_KEY
               valueFrom:
