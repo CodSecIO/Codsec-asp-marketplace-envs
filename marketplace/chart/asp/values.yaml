@@ -2,9 +2,9 @@
 # overrides the image repo/tag fields and injects name/namespace + the inputs
 # declared in schema.yaml at deploy time. The image tags below are placeholders
 # for local render only; Marketplace substitutes the real published repo/tag
-# (track 1.4 / version 1.4.0) at deploy time.
+# (track 1.5 / version 1.5.0) at deploy time.
 
-publishedVersion: "1.4.0"
+publishedVersion: "1.5.0"
 
 # Public domain for the chat UI; the backend is served at /api on the same host.
 domain: asp.example.com
@@ -24,7 +24,7 @@ frontend:
   image:
     # Additional image: lives under the primary image's app root.
     repo: us-docker.pkg.dev/codsec-public/asp-deployer/asp/frontend
-    tag: "1.4.0"
+    tag: "1.5.0"
   replicas: 2
 
 backend:
@@ -32,14 +32,14 @@ backend:
     # Primary image (schema empty key ""): sits AT the app root; the deployer
     # lives at <root>/deployer and additional images at <root>/<name>.
     repo: us-docker.pkg.dev/codsec-public/asp-deployer/asp
-    tag: "1.4.0"
+    tag: "1.5.0"
   replicas: 2
 
 backoffice:
   image:
     # Additional image: the master-admin console (Next.js). Republished + CVE-scanned by Marketplace.
     repo: us-docker.pkg.dev/codsec-public/asp-deployer/asp/backoffice
-    tag: "1.4.0"
+    tag: "1.5.0"
   replicas: 1
 
 # Bring-your-own managed PostgreSQL 16. Marketplace injects these from the
@@ -59,7 +59,7 @@ redis:
   image:
     # Additional image, republished + CVE-scanned by Marketplace (declared in schema).
     repo: us-docker.pkg.dev/codsec-public/asp-deployer/asp/redis
-    tag: "1.4.0"
+    tag: "1.5.0"
   # Cap memory below the container limit so Redis never OOMKills; volatile-lru evicts
   # only expiring (TTL'd) checkpoint keys under pressure, never index metadata.
   maxmemory: "6gb"
