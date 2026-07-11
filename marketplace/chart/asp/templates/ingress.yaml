@@ -16,7 +16,12 @@ metadata:
     {{- include "asp.labels" . | nindent 4 }}
 spec:
   domains:
+    {{- if .Values.domain }}
     - {{ .Values.domain }}
+    {{- end }}
+    {{- if .Values.backofficeDomain }}
+    - {{ .Values.backofficeDomain }}
+    {{- end }}
 ---
 apiVersion: networking.gke.io/v1beta1
 kind: FrontendConfig
@@ -45,6 +50,7 @@ metadata:
     {{- include "asp.labels" . | nindent 4 }}
 spec:
   rules:
+    {{- if .Values.domain }}
     - host: {{ .Values.domain }}
       http:
         paths:
@@ -62,4 +68,17 @@ spec:
                 name: {{ .Release.Name }}-frontend
                 port:
                   number: 80
+    {{- end }}
+    {{- if .Values.backofficeDomain }}
+    - host: {{ .Values.backofficeDomain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-backoffice
+                port:
+                  number: 80
+    {{- end }}
 {{- end }}

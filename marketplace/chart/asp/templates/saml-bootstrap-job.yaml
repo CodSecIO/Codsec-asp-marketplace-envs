@@ -1,0 +1,90 @@
+{{- $cfgHash := printf "%s|%s|%s" .Values.saml.idpEntityId .Values.saml.idpSsoUrl .Values.domain | sha256sum | trunc 8 }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  # Hash-suffixed so a changed config gets a new Job (pod spec is immutable; a
+  # same-named Job with a changed spec fails `kubectl apply` on redeploy). No Helm
+  # hook annotations — the Marketplace deployer aborts on them (C7).
+  name: {{ .Release.Name }}-saml-bootstrap-{{ $cfgHash }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "asp.labels" . | nindent 4 }}
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        {{- include "asp.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: bootstrap
+          image: "{{ .Values.backend.image.repo }}:{{ .Values.backend.image.tag }}"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: BACKEND
+              value: "http://{{ .Release.Name }}-backend"
+            - name: BOOTSTRAP_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-backend-env
+                  key: BOOTSTRAP_API_KEY
+            - name: IDP_ENTITY_ID
+              value: {{ .Values.saml.idpEntityId | quote }}
+            - name: IDP_SSO_URL
+              value: {{ .Values.saml.idpSsoUrl | quote }}
+            - name: IDP_X509
+              value: {{ .Values.saml.idpX509Cert | quote }}
+            - name: SP_ENTITY_ID
+              value: "https://{{ .Values.domain }}/saml/master"
+          # Shell-less image: pure python. Wait for backend health, then bootstrap.
+          # No-op (exit 0) when no IdP is configured. 400/409 (admin exists) is success on upgrade.
+          command:
+            - python
+            - -c
+            - |
+              import os, sys, time, json, urllib.request, urllib.error
+              be = os.environ["BACKEND"]
+              if not os.environ.get("IDP_SSO_URL"):
+                  print("no IdP configured; skipping SAML bootstrap"); sys.exit(0)
+              for i in range(60):
+                  try:
+                      if urllib.request.urlopen(be + "/api/health", timeout=5).status == 200:
+                          break
+                  except Exception as e:
+                      print("waiting for backend (%d/60): %s" % (i + 1, e), flush=True)
+                  time.sleep(5)
+              else:
+                  sys.exit("ERROR: backend not healthy after 5m")
+              body = json.dumps({
+                  "idp_entity_id": os.environ["IDP_ENTITY_ID"],
+                  "idp_sso_url": os.environ["IDP_SSO_URL"],
+                  "idp_slo_url": os.environ["IDP_SSO_URL"],
+                  "idp_x509_cert": os.environ["IDP_X509"],
+                  "sp_entity_id": os.environ["SP_ENTITY_ID"],
+              }).encode()
+              req = urllib.request.Request(
+                  be + "/api/settings/bootstrap", data=body, method="POST",
+                  headers={"Authorization": os.environ["BOOTSTRAP_API_KEY"], "Content-Type": "application/json"})
+              try:
+                  r = urllib.request.urlopen(req, timeout=20)
+                  print("bootstrap OK:", r.status)
+              except urllib.error.HTTPError as e:
+                  msg = e.read().decode()
+                  print("bootstrap response:", e.code, msg)
+                  if e.code not in (400, 409):
+                      sys.exit("ERROR: bootstrap failed")
+                  print("admin already exists — treating as success (upgrade re-run)")
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi

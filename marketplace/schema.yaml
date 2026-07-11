@@ -3,7 +3,7 @@ x-google-marketplace:
   applicationApiVersion: v1beta1
   # Full semver of this release; rendered into the Application CRD version.
   # Distinct from the rolling image track tag (e.g. 1.4).
-  publishedVersion: "1.4.0"
+  publishedVersion: "1.5.0"
   publishedVersionMetadata:
     releaseNote: >-
       CodSec ASP: chat UI and backend API. Bring your own managed PostgreSQL 16;
@@ -34,6 +34,12 @@ x-google-marketplace:
         redis.image.repo:
           type: REPO_WITH_REGISTRY
         redis.image.tag:
+          type: TAG
+    backoffice:
+      properties:
+        backoffice.image.repo:
+          type: REPO_WITH_REGISTRY
+        backoffice.image.tag:
           type: TAG
 
   # Namespaced Role scoped to exactly what the deployer creates.
@@ -89,6 +95,10 @@ properties:
   domain:
     type: string
     title: Public domain for the chat UI (e.g. asp.example.com)
+
+  backofficeDomain:
+    type: string
+    title: Public domain for the admin backoffice (only used with the bundled ingress; e.g. admin.example.com)
 
   # Bring-your-own PostgreSQL 16 (Redis is bundled in-cluster). ASP connects to a
   # managed Postgres you provision and reach from the cluster; it connects without
@@ -159,6 +169,37 @@ properties:
         length: 48
         includeSymbols: false
         base64: false
+
+  spCertificate:
+    type: string
+    x-google-marketplace:
+      type: TLS_CERTIFICATE
+      tlsCertificate:
+        generatedProperties:
+          base64EncodedPrivateKey: spCertificate.base64EncodedPrivateKey
+          base64EncodedCertificate: spCertificate.base64EncodedCertificate
+
+  saml.idpEntityId:
+    type: string
+    title: SAML IdP entity ID (optional; enables first-admin SSO auto-setup)
+  saml.idpSsoUrl:
+    type: string
+    title: SAML IdP single sign-on URL (optional)
+  saml.idpX509Cert:
+    type: string
+    title: SAML IdP X.509 signing certificate (optional; public cert, plain string) [F-D]
+  saml.attrEmail:
+    type: string
+    title: IdP attribute name carrying the user email
+    default: email
+  saml.attrFirstName:
+    type: string
+    title: IdP attribute name carrying the first name
+    default: first-name
+  saml.attrLastName:
+    type: string
+    title: IdP attribute name carrying the last name
+    default: last-name
 
 required:
   - name

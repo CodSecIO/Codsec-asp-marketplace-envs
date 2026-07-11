@@ -98,6 +98,32 @@ spec:
                 secretKeyRef:
                   name: {{ .Release.Name }}-backend-env
                   key: BOOTSTRAP_API_KEY
+            # SAML SP config. SP endpoints derive from the chat domain; the ACS is
+            # {SAML_SP_URL}/api/auth/saml/callback. Origins allow-list the chat + backoffice.
+            - name: SAML_SP_URL
+              value: "https://{{ .Values.domain }}"
+            - name: FRONTEND_URL
+              value: "https://{{ .Values.domain }}"
+            - name: ALLOWED_ORIGINS
+              value: "https://{{ .Values.domain }}{{ if .Values.backofficeDomain }},https://{{ .Values.backofficeDomain }}{{ end }}"
+            - name: ALLOWED_REDIRECT_ORIGINS
+              value: "https://{{ .Values.domain }}{{ if .Values.backofficeDomain }},https://{{ .Values.backofficeDomain }}{{ end }}"
+            - name: SAML_APP_MAPPED_ATTRIBUTE_EMAIL
+              value: {{ .Values.saml.attrEmail | quote }}
+            - name: SAML_APP_MAPPED_ATTRIBUTE_FIRST_NAME
+              value: {{ .Values.saml.attrFirstName | quote }}
+            - name: SAML_APP_MAPPED_ATTRIBUTE_LAST_NAME
+              value: {{ .Values.saml.attrLastName | quote }}
+            - name: SAML_SP_X509CERT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-saml-sp
+                  key: SAML_SP_X509CERT
+            - name: SAML_SP_PRIVATEKEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-saml-sp
+                  key: SAML_SP_PRIVATEKEY
             {{- if .Values.googleApiKey }}
             - name: GOOGLE_API_KEY
               valueFrom:

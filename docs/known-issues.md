@@ -11,16 +11,20 @@ first `MASTER_TENANT_ADMIN` is a **SAML SSO login**.
 So the deployer no longer ships the old api-key bootstrap Job (it could not create an
 admin on v0.12 and made the install hang). The app installs with **zero users**, which
 is healthy, `/api/health` only checks Postgres + Redis, so the Marketplace test
-deployment passes. The first admin is created **after install** by seeding the
-master-tenant SAML config and logging in through the customer's IdP.
+deployment passes. The first admin is created by the first SAML SSO login.
 
-See `docs/install.md` for the first-admin setup steps. The chart generates a
-`BOOTSTRAP_API_KEY` and exposes it on the backend so that call can be made.
+The first-admin SSO is now **auto-configured at install**. When you provide the IdP
+inputs (`saml.idpEntityId`, `saml.idpSsoUrl`, `saml.idpX509Cert`), the chart generates
+the SP keypair, wires the backend's SAML settings, and a post-install Job seeds the
+master-tenant SAML config for you. The manual `POST /api/settings/bootstrap` call is
+**only needed if those IdP inputs were left blank**. See `docs/install.md` for both paths.
 
 **Implication for the listing:** ASP on v0.12 requires the customer to have a SAML IdP
-(Okta, Azure AD, Google Workspace, etc.). A simple out-of-the-box email/password login
-would need a local first-admin bootstrap added on the app side (not available in v0.12).
+(Okta, Azure AD, Google Workspace, etc.) that releases the user's email, first name, and
+last name. A simple out-of-the-box email/password login would need a local first-admin
+bootstrap added on the app side (not available in v0.12).
 
-**Not yet automated (follow-up):** the chart does not yet collect the IdP metadata as
-install inputs or generate the SP keypair, so the SAML setup is an operator step today.
-Wiring it into the schema (turnkey SSO) is a possible follow-up.
+**Upgrade caveat (SP keypair):** a version upgrade may regenerate the SAML SP keypair;
+persistence across upgrade is not yet verified. If it regenerates, the customer must
+re-register the SP metadata at their IdP after the upgrade. This note is removed once an
+upgrade test confirms the keypair is stable.
