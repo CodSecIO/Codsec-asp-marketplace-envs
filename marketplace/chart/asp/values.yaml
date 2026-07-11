@@ -90,9 +90,11 @@ googleApiKey: ""
 # these blanks only let the chart render standalone. Persisted across upgrades
 # by the saml-sp-secret template (lookup-guarded) so IdP-registered SP metadata
 # stays valid.
-spCertificate:
-  base64EncodedCertificate: ""
-  base64EncodedPrivateKey: ""
+# SAML SP keypair (base64 PEM). Marketplace generates it (schema TLS_CERTIFICATE) into these
+# flat keys; blanks only let the chart render standalone. Flat names avoid a dotted-key
+# collision with the TLS_CERTIFICATE property itself in the deployer's print_config.
+samlSpCertificateB64: ""
+samlSpPrivatekeyB64: ""
 
 # First-admin SSO. Fill idp* to auto-bootstrap the master-tenant SAML config on install
 # (post-install hook). attr* name the SAML attributes your IdP releases (the app requires
