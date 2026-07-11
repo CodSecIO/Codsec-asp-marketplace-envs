@@ -176,8 +176,8 @@ properties:
       type: TLS_CERTIFICATE
       tlsCertificate:
         generatedProperties:
-          base64EncodedPrivateKey: spCertificate.base64EncodedPrivateKey
-          base64EncodedCertificate: spCertificate.base64EncodedCertificate
+          base64EncodedPrivateKey: samlSpPrivatekeyB64
+          base64EncodedCertificate: samlSpCertificateB64
 
   saml.idpEntityId:
     type: string
