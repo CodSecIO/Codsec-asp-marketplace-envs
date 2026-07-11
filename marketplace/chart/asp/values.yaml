@@ -32,6 +32,13 @@ backend:
     tag: "1.4.0"
   replicas: 2
 
+backoffice:
+  image:
+    # Additional image: the master-admin console (Next.js). Republished + CVE-scanned by Marketplace.
+    repo: us-docker.pkg.dev/codsec-public/asp-deployer/asp/backoffice
+    tag: "1.4.0"
+  replicas: 1
+
 # Bring-your-own managed PostgreSQL 16. Marketplace injects these from the
 # schema inputs; the placeholders below only let the chart render standalone.
 # The backend connects without TLS, so the database must accept non-TLS connections.

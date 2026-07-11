@@ -35,6 +35,12 @@ x-google-marketplace:
           type: REPO_WITH_REGISTRY
         redis.image.tag:
           type: TAG
+    backoffice:
+      properties:
+        backoffice.image.repo:
+          type: REPO_WITH_REGISTRY
+        backoffice.image.tag:
+          type: TAG
 
   # Namespaced Role scoped to exactly what the deployer creates.
   deployerServiceAccount:
