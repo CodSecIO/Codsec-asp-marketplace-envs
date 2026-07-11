@@ -179,6 +179,28 @@ properties:
           base64EncodedPrivateKey: spCertificate.base64EncodedPrivateKey
           base64EncodedCertificate: spCertificate.base64EncodedCertificate
 
+  saml.idpEntityId:
+    type: string
+    title: SAML IdP entity ID (optional; enables first-admin SSO auto-setup)
+  saml.idpSsoUrl:
+    type: string
+    title: SAML IdP single sign-on URL (optional)
+  saml.idpX509Cert:
+    type: string
+    title: SAML IdP X.509 signing certificate (optional; public cert, plain string) [F-D]
+  saml.attrEmail:
+    type: string
+    title: IdP attribute name carrying the user email
+    default: email
+  saml.attrFirstName:
+    type: string
+    title: IdP attribute name carrying the first name
+    default: first-name
+  saml.attrLastName:
+    type: string
+    title: IdP attribute name carrying the last name
+    default: last-name
+
 required:
   - name
   - namespace
