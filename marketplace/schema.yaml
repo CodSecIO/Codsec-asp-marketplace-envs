@@ -96,6 +96,10 @@ properties:
     type: string
     title: Public domain for the chat UI (e.g. asp.example.com)
 
+  backofficeDomain:
+    type: string
+    title: Public domain for the admin backoffice (only used with the bundled ingress; e.g. admin.example.com)
+
   # Bring-your-own PostgreSQL 16 (Redis is bundled in-cluster). ASP connects to a
   # managed Postgres you provision and reach from the cluster; it connects without
   # TLS, so the database must accept non-TLS connections (e.g. Cloud SQL private IP).

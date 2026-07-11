@@ -9,6 +9,9 @@ publishedVersion: "1.4.0"
 # Public domain for the chat UI; the backend is served at /api on the same host.
 domain: asp.example.com
 
+# Public domain for the admin backoffice. Only consumed when ingress.enabled; blank = backoffice not externally exposed.
+backofficeDomain: ""
+
 # Bundled GKE Ingress + managed TLS certificate. OFF by default (private-by-default,
 # matching the Cloud Marketplace click-to-deploy convention): ASP is a ClusterIP
 # Service reached via `kubectl port-forward` or your own ingress/LB. Set true to opt
