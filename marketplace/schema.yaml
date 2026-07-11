@@ -170,6 +170,15 @@ properties:
         includeSymbols: false
         base64: false
 
+  spCertificate:
+    type: string
+    x-google-marketplace:
+      type: TLS_CERTIFICATE
+      tlsCertificate:
+        generatedProperties:
+          base64EncodedPrivateKey: spCertificate.base64EncodedPrivateKey
+          base64EncodedCertificate: spCertificate.base64EncodedCertificate
+
 required:
   - name
   - namespace
