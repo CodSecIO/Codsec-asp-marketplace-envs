@@ -58,6 +58,7 @@ spec:
     metadata:
       labels:
         {{- include "asp.componentLabels" (dict "Release" .Release "component" "redis") | nindent 8 }}
+        goog-partner-solution: {{ .Values.partnerSolutionId }}
     spec:
       securityContext:
         # Redis runs as the non-root redis user (uid/gid 999); fsGroup makes the mounted

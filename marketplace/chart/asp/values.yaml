@@ -6,6 +6,11 @@
 
 publishedVersion: "1.5.0"
 
+# Google Cloud Marketplace consumption tracking label (goog-partner-solution).
+# Fixed per-product identifier from Producer Portal, stamped on every workload pod so
+# Marketplace can attribute this deployment's resource consumption. Public, not a secret.
+partnerSolutionId: "isol_plb32_0014m00002lmr0xqah_qszsqg4rtlrd54r3kmpo5svca4bk6ysm"
+
 # Public domain for the chat UI; the backend is served at /api on the same host.
 domain: asp.example.com
 
