@@ -3,7 +3,7 @@ x-google-marketplace:
   applicationApiVersion: v1beta1
   # Full semver of this release; rendered into the Application CRD version.
   # Distinct from the rolling image track tag (e.g. 1.4).
-  publishedVersion: "1.5.1"
+  publishedVersion: "1.6.0"
   publishedVersionMetadata:
     releaseNote: >-
       CodSec ASP: chat UI and backend API. Bring your own managed PostgreSQL 16;
