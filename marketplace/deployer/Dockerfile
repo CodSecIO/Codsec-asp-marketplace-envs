@@ -6,6 +6,20 @@
 # build context's chart/ must hold EXACTLY ONE chart subdirectory (Chart.yaml at
 # chart/asp/Chart.yaml), with schema.yaml alongside chart/ - the Makefile builds
 # with the marketplace/ directory as the context.
+
+# Helm carries the same go1.26.5 stdlib advisory, and upstream cannot fix it:
+# v4.2.4 is the latest release and predates go1.26.6, so no base rebuild clears
+# it either. Rebuilding the SAME source with a current toolchain does - v4.2.4
+# already depends on a clean x/net (v0.56.0), the toolchain is the only finding.
+# Drop this stage once upstream ships a helm built with go >= 1.26.6.
+FROM --platform=$BUILDPLATFORM golang:1.26.7-bookworm AS helm-build
+ARG HELM_VERSION=v4.2.4
+RUN git clone --quiet --depth 1 --branch ${HELM_VERSION} \
+      https://github.com/helm/helm.git /src
+WORKDIR /src
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build \
+    && go version -m bin/helm | head -1
+
 FROM gcr.io/cloud-marketplace-tools/k8s/deployer_helm/onbuild
 
 # CVE-2026-39821 (golang.org/x/net punycode) plus the go1.26.5 stdlib advisory.
@@ -21,6 +35,9 @@ RUN set -eux; \
       chmod 755 "$d/kubectl"; \
     done; \
     /opt/kubectl/default/kubectl version --client
+
+COPY --from=helm-build /src/bin/helm /usr/local/bin/helm
+RUN helm version
 
 # The onbuild base only populates /data. `mpdev verify` reads /data-test: a test
 # chart (the tester Pod, annotated marketplace.cloud.google.com/verification:test,
