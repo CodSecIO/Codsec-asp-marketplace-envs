@@ -5,7 +5,7 @@
 REGISTRY ?= us-docker.pkg.dev/codsec-public/asp-deployer
 APP      ?= asp
 TRACK    ?= 1.6
-VERSION  ?= 1.6.0
+VERSION  ?= 1.6.1
 SERVICE  ?= services/asp-codsec.endpoints.codsec-public.cloud.goog
 
 DEPLOYER   := $(REGISTRY)/$(APP)/deployer
