@@ -45,7 +45,7 @@ spec:
             - name: SP_ENTITY_ID
               value: "https://{{ .Values.domain }}/saml/master"
           # Shell-less image: pure python. Wait for backend health, then bootstrap.
-          # No-op (exit 0) when no IdP is configured. 400/409 (admin exists) is success on upgrade.
+          # No-op (exit 0) when no IdP is configured. "Admin already exists" is success on upgrade.
           command:
             - python
             - -c
@@ -79,7 +79,9 @@ spec:
               except urllib.error.HTTPError as e:
                   msg = e.read().decode()
                   print("bootstrap response:", e.code, msg)
-                  if e.code not in (400, 409):
+                  # The backend answers an existing admin with 401 + "already exists";
+                  # a 401 without that text is a bad bootstrap key and still fails.
+                  if not (e.code in (400, 409) or (e.code == 401 and "already exists" in msg)):
                       sys.exit("ERROR: bootstrap failed")
                   print("admin already exists — treating as success (upgrade re-run)")
           resources:
