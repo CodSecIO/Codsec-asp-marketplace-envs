@@ -15,7 +15,18 @@ Producer Portal product (project `codsec-public`): service name
 
 - `asp` - backend (the primary image)
 - `asp/frontend` - frontend
+- `asp/backoffice` - backoffice
+- `asp/redis` - redis
 - `asp/deployer` - the deployer (bakes a snapshot of the chart; see below)
+
+Pushing to this registry needs a `codsec.io` Google account with access to the
+`codsec-public` project.
+
+Producer Portal listing:
+https://console.cloud.google.com/producer-portal/listing-edit/asp-codsec.endpoints.codsec-public.cloud.goog;stepId=publish?project=codsec-public
+
+Google sends Marketplace vulnerability notices to sales@codsec.io. Each names the CVEs,
+the flagged image digest and a fix deadline; a fix ships as a new release (below).
 
 ## What a customer deploys, and the inputs
 
@@ -38,28 +49,47 @@ repo alone changes nothing that customers run.
 
 ## Release steps
 
-Tools: docker (with buildx), helm, crane, mpdev.
+Tools: docker (with buildx), helm, crane, mpdev, trivy.
 
+0. **Bump the version** in `Makefile` (`VERSION`), `chart/asp/Chart.yaml`,
+   `chart/asp/values.yaml` (`publishedVersion` and every image `tag`) and `schema.yaml`
+   (`publishedVersion`). Fixes to the deployer itself go in `deployer/Dockerfile`.
 1. **Lint:** `make lint`
 2. **Build + push the deployer** (amd64, single-manifest so it runs on GKE and crane can
    annotate it): `make deployer`
 3. **Annotate** the deployer with the product service name - a manifest annotation, not a
    Dockerfile LABEL: `make annotate`
    - If you also rebuilt an app image, re-annotate it the same way:
-     `crane mutate <image>:1.2 --annotation com.googleapis.cloudmarketplace.product.service.name=services/asp-codsec.endpoints.codsec-public.cloud.goog`
+     `crane mutate <image>:<version> --annotation com.googleapis.cloudmarketplace.product.service.name=services/asp-codsec.endpoints.codsec-public.cloud.goog`
+   - Tag the app images that did not change with the new version (same digest, so the
+     annotation carries over), for each of `asp`, `asp/frontend`, `asp/backoffice`,
+     `asp/redis`:
+     `crane tag us-docker.pkg.dev/codsec-public/asp-deployer/<image>:<old> <new>`
+   - Scan the pushed deployer before submitting:
+     `trivy image --scanners vuln us-docker.pkg.dev/codsec-public/asp-deployer/asp/deployer:<new>`
 4. **Verify** on a throwaway GKE cluster: `make verify` (installs the deployer, runs the
    apptest tester, uninstalls). The apptest overlay (`apptest/deployer/schema.yaml`)
    supplies headless defaults for `domain` / `adminEmail` and points the `db`/`redis`
    inputs at the ephemeral PostgreSQL + Redis fixtures the apptest chart spins up (so verify
    exercises the real BYO path without needing an external database). Use a STANDARD
    pre-provisioned cluster - Autopilot churns the burst of pods.
-5. **Producer Portal** (codsec-public):
-   - Container images -> Deployer image URL
-     `us-docker.pkg.dev/codsec-public/asp-deployer/asp/deployer`.
-   - New Release: Display Tag `1.2`, Version title `1.2.0`. Confirm the **deployer digest**
-     matches the one you just pushed ("Change Deployer Image" and re-enter if you rebuilt).
-   - Public git repo URL = this repo; Deploy documentation URL = `docs/install.md`.
-   - Submit the Container Images review early - it can take two or more weeks.
+5. **Producer Portal** (listing link above), **Container images** step:
+   1. Click **Edit Content**, then **Edit** next to *Proposed releases* and **Continue**.
+   2. Delete the existing release (trash icon) and click **Add a Release**.
+   3. **Display Tag**: pick the track (e.g. `1.6`) whose digest matches the deployer you
+      just pushed. An entry marked *Out of sync* is the old digest; do not pick it.
+   4. Fill in:
+      - Version title: the track, e.g. `1.6`
+      - Description: `CodSec ASP: chat UI + backend API. BYOC.`
+      - Public git repo URL: `https://github.com/CodSecIO/Codsec-asp-marketplace-envs`
+      - Deploy documentation URL:
+        `https://github.com/CodSecIO/Codsec-asp-marketplace-envs/blob/main/docs/install.md`
+      - Default Release: the new release
+   5. **Save and Validate**. Validation (schema extraction, a test deployment and a
+      vulnerability scan) can take up to 2 hours. If it fails, fix, push a new version
+      and repeat from step 0.
+   6. When validation succeeds, **Submit**. Once the section is approved, go to
+      **Publish** and publish the listing.
 
 > Marketplace snapshots a release immutably per Display Tag + Version. If you change an
 > image, that produces a new digest (re-annotate it) and needs a new release; re-pushing
