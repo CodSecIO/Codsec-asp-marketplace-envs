@@ -8,11 +8,11 @@
 # with the marketplace/ directory as the context.
 
 # kubectl and helm are rebuilt from upstream source rather than taken from the
-# base or a release download: no released binary is built with go >= 1.26.9 and
+# base or a release download: no released binary is built with go >= 1.26.10 and
 # golang.org/x/net >= 0.60.0, which the Marketplace scan requires. Rebuilding
 # the same tag with a current toolchain and the patched module clears both.
 # Drop these stages once upstream releases meet those minimums.
-ARG GO_IMAGE=golang:1.26.9-bookworm
+ARG GO_IMAGE=golang:1.26.10-bookworm
 ARG XNET_VERSION=v0.60.0
 
 FROM --platform=$BUILDPLATFORM ${GO_IMAGE} AS helm-build
@@ -41,7 +41,7 @@ RUN KUBE_GIT_VERSION=${KUBECTL_VERSION} KUBE_GIT_TREE_STATE=clean \
 FROM gcr.io/cloud-marketplace-tools/k8s/deployer_helm/onbuild
 
 RUN apt-get update -qq \
-    && apt-get install -y -qq --only-upgrade libssl3 openssl \
+    && apt-get install -y -qq --only-upgrade libssl3 openssl libbrotli1 \
     && rm -rf /var/lib/apt/lists/*
 
 # The base ships one kubectl per supported minor under /opt/kubectl/v*/; all
